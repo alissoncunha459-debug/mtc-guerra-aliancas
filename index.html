@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTC – Planejador de Guerra de Alianças</title>
+  <style>
+    :root {
+      --primary: #1a1a2e; --secondary: #16213e; --accent: #FFA500;
+      --cosmic: #9b59b6; --tech: #3498db; --mutant: #f1c40f;
+      --skill: #e74c3c; --science: #2ecc71; --mystic: #1abc9c;
+      --text: #e0e0e0; --text-dim: #8a8a9a; --border: rgba(255,165,0,0.2);
+      --card-bg: rgba(22,33,62,0.9); --danger: #e74c3c;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--primary); color: var(--text); min-height: 100vh; }
+    header {
+      background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 60%, #16213e 100%);
+      border-bottom: 2px solid var(--accent); padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 24px rgba(255,165,0,0.25); position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 48px; height: 48px; background: linear-gradient(135deg, var(--accent), #ff6b00);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 900; color: #1a1a2e;
+      box-shadow: 0 0 18px rgba(255,165,0,0.5); flex-shrink: 0;
+    }
+    .logo-text h1 { font-size: 1.2rem; color: var(--accent); font-weight: 700; letter-spacing: 1px; }
+    .logo-text p { font-size: 0.7rem; color: var(--text-dim); }
+    .header-score { text-align: right; }
+    .header-score .score-num { font-size: 1.6rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .header-score .score-lbl { font-size: 0.65rem; color: var(--text-dim); letter-spacing: 1px; }
+    nav { display: flex; background: var(--secondary); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      padding: 13px 22px; cursor: pointer; color: var(--text-dim); font-size: 0.88rem; font-weight: 600;
+      white-space: nowrap; transition: all 0.25s; border-bottom: 3px solid transparent;
+      display: flex; align-items: center; gap: 6px; user-select: none;
+    }
+    .nav-tab:hover { color: var(--text); background: rgba(255,165,0,0.05); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(255,165,0,0.08); }
+    main { padding: 18px; max-width: 1440px; margin: 0 auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 16px; backdrop-filter: blur(8px); }
+    .section-title { font-size: 1.15rem; font-weight: 700; color: var(--accent); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .search-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .search-box { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; color: var(--text); font-size: 0.88rem; outline: none; transition: border-color 0.25s; width: 240px; }
+    .search-box:focus { border-color: var(--accent); }
+    .filter-btn { padding: 7px 15px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: all 0.25s; }
+    .filter-btn:hover { background: rgba(255,255,255,0.08); }
+    .filter-btn.active { border-color: var(--accent); background: rgba(255,165,0,0.15); color: var(--accent); }
+    .filter-btn.fc-cosmic.active  { background: rgba(155,89,182,0.2);  border-color: var(--cosmic);  color: var(--cosmic); }
+    .filter-btn.fc-tech.active    { background: rgba(52,152,219,0.2);  border-color: var(--tech);    color: var(--tech); }
+    .filter-btn.fc-mutant.active  { background: rgba(241,196,15,0.2);  border-color: var(--mutant);  color: var(--mutant); }
+    .filter-btn.fc-skill.active   { background: rgba(231,76,60,0.2);   border-color: var(--skill);   color: var(--skill); }
+    .filter-btn.fc-science.active { background: rgba(46,204,113,0.2);  border-color: var(--science); color: var(--science); }
+    .filter-btn.fc-mystic.active  { background: rgba(26,188,156,0.2);  border-color: var(--mystic);  color: var(--mystic); }
+    .char-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .char-card { background: var(--card-bg); border-radius: 10px; padding: 10px 6px; text-align: center; cursor: grab; transition: transform 0.2s, box-shadow 0.2s; border: 2px solid var(--border); user-select: none; }
+    .char-card:active { cursor: grabbing; }
+    .char-card:hover { transform: translateY(-3px); }
+    .char-card.bc { border-color: var(--cosmic); }  .char-card.bc:hover { box-shadow: 0 6px 18px rgba(155,89,182,0.35); }
+    .char-card.bt { border-color: var(--tech); }    .char-card.bt:hover { box-shadow: 0 6px 18px rgba(52,152,219,0.35); }
+    .char-card.bm { border-color: var(--mutant); }  .char-card.bm:hover { box-shadow: 0 6px 18px rgba(241,196,15,0.35); }
+    .char-card.bs { border-color: var(--skill); }   .char-card.bs:hover { box-shadow: 0 6px 18px rgba(231,76,60,0.35); }
+    .char-card.bn { border-color: var(--science); } .char-card.bn:hover { box-shadow: 0 6px 18px rgba(46,204,113,0.35); }
+    .char-card.by { border-color: var(--mystic); }  .char-card.by:hover { box-shadow: 0 6px 18px rgba(26,188,156,0.35); }
+    .avatar { width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 7px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .av-c { background: linear-gradient(135deg,#9b59b6,#6c3483); }
+    .av-t { background: linear-gradient(135deg,#3498db,#1a5276); }
+    .av-m { background: linear-gradient(135deg,#f1c40f,#9a7d0a); }
+    .av-s { background: linear-gradient(135deg,#e74c3c,#922b21); }
+    .av-n { background: linear-gradient(135deg,#2ecc71,#1a8a4a); }
+    .av-y { background: linear-gradient(135deg,#1abc9c,#0e6655); }
+    .char-name { font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; line-height: 1.2; }
+    .char-meta { display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .tier-badge { font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; font-weight: 800; }
+    .tier-S { background: #e74c3c; color: #fff; }
+    .tier-A { background: #FFA500; color: #1a1a2e; }
+    .tier-B { background: #4CAF50; color: #fff; }
+    .tier-C { background: #666; color: #fff; }
+    .no-results { text-align: center; padding: 40px; color: var(--text-dim); }
+    .def-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; align-items: center; }
+    .defense-sections { display: flex; flex-direction: column; gap: 14px; }
+    .def-section { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .def-section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .sec-num { width: 30px; height: 30px; background: var(--accent); color: #1a1a2e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.85rem; flex-shrink: 0; }
+    .sec-name { font-size: 0.95rem; font-weight: 700; color: var(--accent); }
+    .def-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 7px; }
+    .def-slot { background: rgba(255,255,255,0.03); border: 2px dashed rgba(255,165,0,0.3); border-radius: 10px; min-height: 108px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s; position: relative; padding: 6px 4px; text-align: center; overflow: hidden; }
+    .slot-node-tag { font-size: 0.58rem; padding: 2px 5px; border-radius: 4px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .slot-node-name { font-size: 0.6rem; color: var(--text-dim); margin-bottom: 3px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    .def-slot:hover, .def-slot.drag-over { border-color: var(--accent); background: rgba(255,165,0,0.06); }
+    .def-slot.filled { border-style: solid; }
+    .def-slot.bc { border-color: var(--cosmic); } .def-slot.bt { border-color: var(--tech); }
+    .def-slot.bm { border-color: var(--mutant); } .def-slot.bs { border-color: var(--skill); }
+    .def-slot.bn { border-color: var(--science); } .def-slot.by { border-color: var(--mystic); }
+    .slot-empty-icon { font-size: 1.8rem; color: rgba(255,255,255,0.1); }
+    .slot-empty-lbl { font-size: 0.7rem; color: rgba(255,255,255,0.2); margin-top: 4px; }
+    .slot-avatar { width: 52px; height: 52px; font-size: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; }
+    .slot-name { font-size: 0.7rem; font-weight: 700; line-height: 1.2; }
+    .remove-btn { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: var(--danger); border: none; color: #fff; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+    .def-slot:hover .remove-btn { display: flex; }
+    .nodes-grid { display: flex; flex-direction: column; gap: 20px; }
+    .nodes-section-block { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .nodes-subgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 8px; }
+    .path-group-nodes { margin-bottom: 16px; }
+    .path-group-nodes:last-child { margin-bottom: 0; }
+    .path-group { margin-bottom: 14px; }
+    .path-group:last-child { margin-bottom: 0; }
+    .path-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .path-label { font-size: 0.76rem; font-weight: 800; color: var(--accent); padding: 2px 10px 2px 8px; background: rgba(255,165,0,0.08); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; white-space: nowrap; }
+    .path-desc { font-size: 0.67rem; color: var(--text-dim); }
+    .node-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; transition: transform 0.2s, border-color 0.2s; }
+    .node-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .node-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .node-num { width: 34px; height: 34px; flex-shrink: 0; background: linear-gradient(135deg, var(--accent), #ff6b00); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #1a1a2e; font-size: 0.8rem; }
+    .node-name { font-size: 0.92rem; font-weight: 700; }
+    .node-tag { display: inline-block; margin-top: 3px; font-size: 0.68rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+    .node-desc { font-size: 0.78rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 10px; }
+    .node-defenders-lbl { font-size: 0.75rem; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; }
+    .defenders-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .defender-chip { padding: 3px 10px; border-radius: 14px; font-size: 0.72rem; font-weight: 700; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+    .stat-val { font-size: 1.9rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .stat-lbl { font-size: 0.78rem; color: var(--text-dim); margin-top: 5px; }
+    .score-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin: 10px 0 4px; }
+    .score-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #ff6b00); border-radius: 4px; transition: width 0.6s ease; }
+    .score-pct { font-size: 0.78rem; color: var(--text-dim); text-align: right; }
+    .breakdown { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+    .bk-item { display: flex; justify-content: space-between; font-size: 0.82rem; }
+    .bk-label { color: var(--text-dim); } .bk-val { font-weight: 700; color: var(--accent); }
+    .div-bar { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 6px; }
+    .div-chip { padding: 4px 12px; border-radius: 16px; font-size: 0.78rem; font-weight: 700; }
+    .div-cosmic{background:var(--cosmic);color:#fff;} .div-tech{background:var(--tech);color:#fff;}
+    .div-mutant{background:var(--mutant);color:#1a1a2e;} .div-skill{background:var(--skill);color:#fff;}
+    .div-science{background:var(--science);color:#1a1a2e;} .div-mystic{background:var(--mystic);color:#1a1a2e;}
+    .def-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 14px; }
+    .sum-section { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 10px; max-height: 240px; overflow-y: auto; }
+    .sum-title { font-size: 0.65rem; color: var(--accent); font-weight: 700; text-align: center; margin-bottom: 7px; }
+    .sum-char { font-size: 0.65rem; padding: 3px 4px; border-radius: 4px; text-align: center; margin-bottom: 3px; color: #fff; }
+    .sum-empty { font-size: 0.65rem; color: var(--text-dim); text-align: center; padding: 3px; }
+    .saves-list { display: flex; flex-direction: column; gap: 8px; }
+    .save-item { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .save-name { font-size: 0.88rem; font-weight: 700; }
+    .save-meta { font-size: 0.72rem; color: var(--text-dim); margin-top: 2px; }
+    .save-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn { padding: 9px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 700; transition: all 0.25s; display: inline-flex; align-items: center; gap: 5px; }
+    .btn-primary { background: var(--accent); color: #1a1a2e; }
+    .btn-primary:hover { background: #ffb800; transform: translateY(-1px); }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.13); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500; align-items: center; justify-content: center; padding: 16px; }
+    .modal.active { display: flex; }
+    .modal-box { background: var(--secondary); border: 1px solid var(--accent); border-radius: 16px; padding: 22px; width: 100%; max-width: 420px; max-height: 88vh; display: flex; flex-direction: column; gap: 12px; }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    .modal-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+    .modal-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+    .modal-item:hover { background: rgba(255,165,0,0.08); border-color: rgba(255,165,0,0.3); }
+    .modal-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .modal-char-name { font-weight: 700; font-size: 0.83rem; }
+    .modal-char-sub { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--secondary); border: 1px solid var(--accent); border-radius: 8px; padding: 11px 18px; color: var(--text); font-size: 0.88rem; z-index: 1000; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .char-count { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; }
+    @media (max-width: 768px) { .def-summary{grid-template-columns:1fr 1fr;} .stats-grid{grid-template-columns:repeat(2,1fr);} }
+    @media (max-width: 480px) { main{padding:10px;} .def-slots{gap:5px;} .def-slot{min-height:95px;} .def-summary{grid-template-columns:1fr;} header{flex-wrap:wrap;gap:8px;} }
+    /* ── ALIANÇA ── */
+    .group-tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .group-tab { padding:8px 22px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text); cursor:pointer; font-weight:700; font-size:0.88rem; transition:all 0.2s; }
+    .group-tab.active { background:rgba(255,165,0,0.15); border-color:var(--accent); color:var(--accent); }
+    .member-list { display:flex; flex-direction:column; gap:12px; }
+    .member-card { background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:14px; }
+    .member-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .member-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#ff6b00); display:flex; align-items:center; justify-content:center; font-weight:800; color:#1a1a2e; font-size:0.9rem; flex-shrink:0; }
+    .member-name-txt { font-weight:700; font-size:0.95rem; flex:1; }
+    .member-stats { font-size:0.72rem; color:var(--text-dim); }
+    .member-champs-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .mchamp-chip { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:8px; font-size:0.72rem; font-weight:700; border:1px solid; cursor:pointer; transition:opacity 0.2s; }
+    .mchamp-chip:hover { opacity:0.75; }
+    .result-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:4px; }
+    .result-card { background:var(--card-bg); border:1px solid var(--accent); border-radius:12px; padding:14px; }
+    .result-member-name { font-size:0.95rem; font-weight:800; color:var(--accent); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+    .result-champ-row { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; margin-bottom:4px; }
+    .result-champ-av { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+    .result-champ-info { flex:1; }
+    .result-champ-name { font-size:0.78rem; font-weight:700; }
+    .result-champ-sub { font-size:0.68rem; color:var(--text-dim); }
+    .result-slot-badge { font-size:0.65rem; padding:2px 6px; border-radius:4px; background:rgba(255,165,0,0.2); color:var(--accent); font-weight:700; }
+    /* ── ESTRATÉGIA ── */
+    .strategy-box { background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px; }
+    .strategy-options { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; }
+    .strat-opt { display:flex; flex-direction:column; gap:3px; padding:10px 12px; border-radius:10px; border:2px solid var(--border); cursor:pointer; transition:all 0.2s; background:rgba(255,255,255,0.02); }
+    .strat-opt:hover { border-color:rgba(255,165,0,0.4); background:rgba(255,165,0,0.05); }
+    .strat-opt.active { border-color:var(--accent); background:rgba(255,165,0,0.12); }
+    .strat-icon { font-size:1.3rem; }
+    .strat-lbl { font-size:0.85rem; font-weight:700; color:var(--text); }
+    .strat-desc { font-size:0.68rem; color:var(--text-dim); line-height:1.35; }
+    .strat-opt.active .strat-lbl { color:var(--accent); }
+    /* nó sinergy badge */
+    .synergy-star { font-size:0.7rem; color:#f1c40f; margin-left:3px; }
+    /* modal aliança */
+    #modal-alianca { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:600; align-items:center; justify-content:center; padding:16px; }
+    #modal-alianca.active { display:flex; }
+    .ma-box { background:var(--secondary); border:1px solid var(--accent); border-radius:16px; padding:22px; width:100%; max-width:520px; max-height:90vh; display:flex; flex-direction:column; gap:12px; overflow-y:auto; }
+    .ma-title { font-size:1.05rem; font-weight:700; color:var(--accent); }
+    .ma-champ-row { display:grid; grid-template-columns:1fr auto auto auto auto; gap:6px; align-items:center; padding:6px 8px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,0.02); }
+    .ma-select { background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:6px; padding:4px 6px; color:var(--text); font-size:0.75rem; cursor:pointer; }
+    .ma-select:focus { outline:none; border-color:var(--accent); }
+    .ma-champ-search { display:flex; flex-direction:column; gap:4px; max-height:220px; overflow-y:auto; margin-top:4px; }
+    .ma-champ-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; cursor:pointer; border:1px solid transparent; transition:all 0.18s; }
+    .ma-champ-item:hover { background:rgba(255,165,0,0.08); border-color:rgba(255,165,0,0.3); }
+    .ma-champ-item.selected { background:rgba(255,165,0,0.15); border-color:var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">M</div>
+    <div class="logo-text">
+      <h1>TORNEIO DOS CAMPEÕES</h1>
+      <p>Planejador de Guerra de Alianças · v3.0</p>
+    </div>
+  </div>
+  <div class="header-score">
+    <div class="score-num" id="header-score">0</div>
+    <div class="score-lbl">PONTUAÇÃO</div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-tab active" onclick="showTab('seletor',this)">⚡ Campeões</div>
+  <div class="nav-tab" onclick="showTab('defesa',this)">🛡️ Defesa GA</div>
+  <div class="nav-tab" onclick="showTab('nos',this)">🗺️ Nós</div>
+  <div class="nav-tab" onclick="showTab('painel',this)">📊 Painel</div>
+  <div class="nav-tab" onclick="showTab('alianca',this)">🤝 Aliança</div>
+</nav>
+
+<main>
+  <div id="tab-seletor" class="tab-content active">
+    <div class="section-title">⚡ Seletor de Campeões
+      <span class="char-count" id="char-count"></span>
+    </div>
+    <div class="search-bar">
+      <input class="search-box" id="srch" type="text" placeholder="🔍 Buscar campeão…" oninput="renderChars()">
+      <select class="search-box" id="tier-sel" style="width:140px;" onchange="renderChars()">
+        <option value="">Todos os Tiers</option>
+        <option value="S">Tier S</option>
+        <option value="A">Tier A</option>
+        <option value="B">Tier B</option>
+        <option value="C">Tier C</option>
+      </select>
+    </div>
+    <div class="filters" id="cls-filters">
+      <button class="filter-btn active" data-cls="" onclick="setCls(this)">Todos</button>
+      <button class="filter-btn fc-cosmic"  data-cls="cosmic"  onclick="setCls(this)">🌌 Cósmico</button>
+      <button class="filter-btn fc-tech"    data-cls="tech"    onclick="setCls(this)">⚙️ Tecnologia</button>
+      <button class="filter-btn fc-mutant"  data-cls="mutant"  onclick="setCls(this)">🧬 Mutante</button>
+      <button class="filter-btn fc-skill"   data-cls="skill"   onclick="setCls(this)">🗡️ Habilidade</button>
+      <button class="filter-btn fc-science" data-cls="science" onclick="setCls(this)">🧪 Ciência</button>
+      <button class="filter-btn fc-mystic"  data-cls="mystic"  onclick="setCls(this)">✨ Místico</button>
+    </div>
+    <div class="char-grid" id="char-grid"></div>
+  </div>
+
+  <div id="tab-defesa" class="tab-content">
+    <div class="section-title">🛡️ Construtor de Defesa — Guerra de Alianças</div>
+    <div class="def-toolbar">
+      <button class="btn btn-secondary" onclick="openModal(-1,-1)">➕ Adicionar Campeão</button>
+      <button class="btn btn-primary"   onclick="saveDefense()">💾 Salvar</button>
+      <button class="btn btn-danger"    onclick="clearDefense()">🗑️ Limpar</button>
+      <span style="font-size:0.8rem;color:var(--text-dim);">Clique ou arraste para preencher os slots</span>
+    </div>
+    <div class="defense-sections" id="def-sections"></div>
+  </div>
+
+  <div id="tab-nos" class="tab-content">
+    <div class="section-title">🗺️ Analisador de Nós — Guerra de Alianças</div>
+    <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:16px;">Melhores defensores para cada nó do mapa de GA.</p>
+    <div class="nodes-grid" id="nodes-grid"></div>
+  </div>
+
+  <div id="tab-painel" class="tab-content">
+    <div class="section-title">📊 Painel de Controle</div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="section-title" style="font-size:1rem;">🏆 Pontuação de Defesa</div>
+      <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
+      <div class="score-pct" id="score-pct">0 / 2500 (0%)</div>
+      <div class="breakdown" id="breakdown"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="section-title" style="font-size:1rem;">🎯 Diversidade de Classes</div>
+      <div class="div-bar" id="div-bar"><span style="color:var(--text-dim);font-size:0.82rem;">Nenhum campeão adicionado.</span></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="section-title" style="font-size:1rem;">📋 Resumo da Defesa</div>
+      <div class="def-summary" id="def-summary"></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="font-size:1rem;">💾 Defesas Salvas</div>
+      <div class="saves-list" id="saves-list"><div class="no-results">Nenhuma defesa salva ainda.</div></div>
+    </div>
+  </div>
+
+  <div id="tab-alianca" class="tab-content">
+    <div class="section-title">🤝 Gestão de Aliança — Grupos de Guerra</div>
+    <div class="group-tabs" id="group-tabs">
+      <button class="group-tab active" onclick="setGroup(0,this)">Grupo 1</button>
+      <button class="group-tab" onclick="setGroup(1,this)">Grupo 2</button>
+      <button class="group-tab" onclick="setGroup(2,this)">Grupo 3</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-primary" onclick="addMember()">➕ Adicionar Membro</button>
+    </div>
+    <div class="strategy-box">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--accent);margin-bottom:8px;">🎯 Estratégia de Defesa</div>
+      <div class="strategy-options" id="strategy-options">
+        <label class="strat-opt active" onclick="setStrategy('balanced',this)">
+          <input type="radio" name="strat" value="balanced" checked hidden>
+          <span class="strat-icon">🔄</span><span class="strat-lbl">Equilibrada</span>
+          <span class="strat-desc">Distribui os melhores defensores uniformemente pelos 50 nós</span>
+        </label>
+        <label class="strat-opt" onclick="setStrategy('boss',this)">
+          <input type="radio" name="strat" value="boss" hidden>
+          <span class="strat-icon">💀</span><span class="strat-lbl">Ilha do Boss</span>
+          <span class="strat-desc">Concentra os campeões mais difíceis nos nós 41–50 (Boss Island)</span>
+        </label>
+        <label class="strat-opt" onclick="setStrategy('subboss',this)">
+          <input type="radio" name="strat" value="subboss" hidden>
+          <span class="strat-icon">⚔️</span><span class="strat-lbl">Sub-Boss</span>
+          <span class="strat-desc">Prioriza nós 31–40 (Caminhos 7–9) com defensores de alto nível</span>
+        </label>
+        <label class="strat-opt" onclick="setStrategy('boss_subboss',this)">
+          <input type="radio" name="strat" value="boss_subboss" hidden>
+          <span class="strat-icon">🔥</span><span class="strat-lbl">Boss + Sub</span>
+          <span class="strat-desc">Reforça toda a reta final N31–N50 (Caminhos 7–9 + Boss Island)</span>
+        </label>
+        <label class="strat-opt" onclick="setStrategy('mid',this)">
+          <input type="radio" name="strat" value="mid" hidden>
+          <span class="strat-icon">🛡️</span><span class="strat-lbl">Centro</span>
+          <span class="strat-desc">Dificulta o caminho central N11–N30 (Caminhos 3–6) para desacelerar o ataque</span>
+        </label>
+        <label class="strat-opt" onclick="setStrategy('frontline',this)">
+          <input type="radio" name="strat" value="frontline" hidden>
+          <span class="strat-icon">🎯</span><span class="strat-lbl">Linha de Frente</span>
+          <span class="strat-desc">Bloqueia a entrada N1–N10 para forçar gasto de itens cedo</span>
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-secondary" id="btn-montar" onclick="montarDefesa()" disabled style="opacity:0.5;">⚡ Montar Defesa</button>
+      <span style="font-size:0.78rem;color:var(--text-dim);" id="alianca-status">Cadastre membros e seus campeões para montar a defesa.</span>
+    </div>
+    <div class="member-list" id="member-list"></div>
+    <div id="resultado-defesa" style="display:none;">
+      <div class="section-title" style="margin-top:24px;">🏆 Resultado — Campeões por Membro</div>
+      <div class="result-cards" id="result-cards"></div>
+    </div>
+  </div>
+</main>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-title">Escolher Campeão</div>
+    <input class="search-box" id="modal-srch" type="text" placeholder="🔍 Buscar…" oninput="renderModalList()" style="width:100%;">
+    <div class="modal-list" id="modal-list"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" onclick="clearSlot()" id="modal-clear-btn">Remover</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Modal Aliança -->
+<div id="modal-alianca" onclick="if(event.target===this)closeMa()">
+  <div class="ma-box">
+    <div class="ma-title" id="ma-title">Campeões do Membro</div>
+    <input class="search-box" id="ma-srch" type="text" placeholder="🔍 Buscar campeão…" oninput="renderMaList()" style="width:100%;">
+    <div style="font-size:0.78rem;color:var(--text-dim);">Clique para adicionar · Clique novamente para remover</div>
+    <div class="ma-champ-search" id="ma-list"></div>
+    <div style="font-size:0.82rem;color:var(--accent);font-weight:700;margin-top:4px;" id="ma-selected-lbl">0 selecionados</div>
+    <div id="ma-selected-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-primary" onclick="saveMaChamps()">✅ Salvar Campeões</button>
+      <button class="btn btn-secondary" onclick="closeMa()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════
+   DADOS — 230+ CAMPEÕES (maio 2026)
+   tier: S=S+/S  A=A  B=B  C=C/D/E
+   def: valor defensivo 50-95 baseado no tier de defesa
+══════════════════════════════════════════════════ */
+const CHARS = [
+  /* ── CIÊNCIA ── */
+  {id:1,  name:'Photon',                    cls:'science',tier:'S',e:'🌟',def:93,tip:'Velocidade, energia e feixe de luz'},
+  {id:2,  name:'Silk',                      cls:'science',tier:'S',e:'🕸️',def:55,tip:'Teia e reflexos superiores'},
+  {id:3,  name:'Hulk',                      cls:'science',tier:'S',e:'💚',def:55,tip:'Furia e poder bruto do Gamma'},
+  {id:4,  name:'Conde Nefaria',             cls:'science',tier:'S',e:'🌑',def:63,tip:'Energia cosmica e poder absorvido'},
+  {id:5,  name:'Mulher-Aranha',             cls:'science',tier:'S',e:'🕷️',def:93,tip:'Veneno, forca e sentido de aranha'},
+  {id:6,  name:'Guardiao Vermelho',         cls:'science',tier:'S',e:'🛡️',def:64,tip:'Escudo sovietico e contra-ataque'},
+  {id:7,  name:'Titania',                   cls:'science',tier:'S',e:'💪',def:82,tip:'Supeforca e resistencia brutais'},
+  {id:8,  name:'Escorpiao',                 cls:'science',tier:'S',e:'🦂',def:83,tip:'Veneno e cauda paralisante'},
+  {id:9,  name:'Quake',                     cls:'science',tier:'S',e:'🌊',def:73,tip:'Vibracoes sismicas e esquiva unica'},
+  {id:10, name:'Tocha Humana',              cls:'science',tier:'S',e:'🔥',def:75,tip:'Imunidade ao fogo e stacks de nova'},
+  {id:11, name:'Homem-Aranha Porco',        cls:'science',tier:'S',e:'🐷',def:82,tip:'Ham power e habilidades surpresa'},
+  {id:12, name:'Sentry (Vigia)',            cls:'science',tier:'A',e:'⚡',def:54,tip:'Poder solar e batalha interna'},
+  {id:13, name:'Cap. America (GI)',         cls:'science',tier:'A',e:'🛡️',def:51,tip:'Escudo vibranium e lideranca'},
+  {id:14, name:'Spot',                      cls:'science',tier:'A',e:'⭕',def:72,tip:'Portais dimensionais e teletransporte'},
+  {id:15, name:'Cassie Lang',              cls:'science',tier:'A',e:'🐜',def:71,tip:'Miniaturizacao e poder de Pym'},
+  {id:16, name:'Void',                      cls:'science',tier:'A',e:'⚫',def:88,tip:'Multiplos debuffs e poder sombrio'},
+  {id:17, name:'Hulka',                     cls:'science',tier:'A',e:'💚',def:52,tip:'Regeneracao e forca crescente'},
+  {id:18, name:'Luke Cage',                 cls:'science',tier:'S',e:'🦸',def:55,tip:'Pele de aco e resistencia passiva'},
+  {id:19, name:'Anti-Venom',               cls:'science',tier:'A',e:'🤍',def:63,tip:'Purificacao e simbionte branco'},
+  {id:20, name:'H-A Miles Morales',        cls:'science',tier:'A',e:'🕷️',def:73,tip:'Bioeletricidade e furtividade'},
+  {id:21, name:'Abominacao Imortal',       cls:'science',tier:'B',e:'🧟',def:81,tip:'Imortalidade e forca brutal'},
+  {id:22, name:'Hulk Imortal',             cls:'science',tier:'B',e:'💀',def:81,tip:'Ressurreicao e poder gamma'},
+  {id:23, name:'Vespa',                     cls:'science',tier:'B',e:'🐝',def:72,tip:'Miniaturizacao e picadas de energia'},
+  {id:24, name:'Aranha-Gwen',              cls:'science',tier:'B',e:'🕸️',def:71,tip:'Velocidade e esquiva extraordinarias'},
+  {id:25, name:'Joe Fixit',                cls:'science',tier:'B',e:'🎩',def:52,tip:'Hulk cinza e estilo mafioso'},
+  {id:26, name:'Aranha-Punk',              cls:'science',tier:'B',e:'🎸',def:62,tip:'Poderes de aranha com atitude punk'},
+  {id:27, name:'H-A 2099',                 cls:'science',tier:'B',e:'🕷️',def:62,tip:'Tecnologia futurista e garras'},
+  {id:28, name:'O Supervisor',             cls:'science',tier:'B',e:'👁️',def:72,tip:'Controle e vigilancia total'},
+  {id:29, name:'Morbio',                   cls:'science',tier:'B',e:'🧛',def:80,tip:'Vampiro cientifico e dreno de vida'},
+  {id:30, name:'Sr. Negativo',             cls:'science',tier:'B',e:'⬛',def:72,tip:'Inversao de efeitos e energia sombria'},
+  {id:31, name:'Mercurio',                 cls:'science',tier:'B',e:'⚡',def:81,tip:'Velocidade extrema e reflexos'},
+  {id:32, name:'Lagarto',                  cls:'science',tier:'B',e:'🦎',def:62,tip:'Regeneracao reptiliana e veneno'},
+  {id:33, name:'Homem-Amarelo',            cls:'science',tier:'B',e:'🐝',def:71,tip:'Reducao de tamanho e bioeletricidade'},
+  {id:34, name:'Homem-Areia',              cls:'science',tier:'C',e:'🏖️',def:63,tip:'Corpo de areia e resistencia'},
+  {id:35, name:'H-A Classico',             cls:'science',tier:'C',e:'🕷️',def:62,tip:'Sentido de aranha e teia'},
+  {id:36, name:'Hulk (Ragnarok)',          cls:'science',tier:'C',e:'💪',def:62,tip:'Furia de arena e combate brutal'},
+  {id:37, name:'Hulk Vermelho',            cls:'science',tier:'A',e:'🔴',def:63,tip:'Calor e forca do Thunderbolt Ross'},
+  {id:38, name:'O Lider',                  cls:'science',tier:'C',e:'🧠',def:73,tip:'Inteligencia gamma e debuffs mentais'},
+  {id:39, name:'Sr. Fantastico',           cls:'science',tier:'A',e:'🔬',def:71,tip:'Elasticidade e inteligencia superior'},
+  {id:40, name:'Joaquin Torres',           cls:'science',tier:'C',e:'🦅',def:61,tip:'Asas e agilidade aerea'},
+  {id:41, name:'Alto Evolucionario',       cls:'science',tier:'A',e:'🧬',def:93,tip:'Evolucao suprema e controle biologico'},
+  {id:42, name:'Electro',                  cls:'science',tier:'C',e:'⚡',def:71,tip:'Eletricidade e choque em area'},
+  {id:43, name:'Homem-Formiga',            cls:'science',tier:'A',e:'🐜',def:52,tip:'Miniaturizacao e forca de Pym'},
+  {id:44, name:'Abominacao',              cls:'science',tier:'C',e:'👹',def:61,tip:'Forca brutal e resistencia'},
+  {id:45, name:'Jessica Jones',            cls:'science',tier:'C',e:'👊',def:80,tip:'Supeforca e resistencia ao dano'},
+  {id:46, name:'A Coisa',                  cls:'science',tier:'C',e:'🪨',def:93,tip:'Rocha viva e forca incrivel'},
+  {id:47, name:'Mulher Invisivel',         cls:'science',tier:'C',e:'👻',def:80,tip:'Invisibilidade e campos de forca'},
+  {id:48, name:'Rinoceronte',              cls:'science',tier:'B',e:'🦏',def:52,tip:'Carga e armadura de rinoceronte'},
+  {id:49, name:'Cap. America WW2',         cls:'science',tier:'C',e:'🛡️',def:51,tip:'O primeiro vingador'},
+  {id:50, name:'Cap. America Classico',    cls:'science',tier:'C',e:'🛡️',def:51,tip:'Lideranca e escudo vibranium'},
+  /* ── HABILIDADE ── */
+  {id:51, name:'Nick Fury',                cls:'skill',tier:'S',e:'🕶️',def:92,tip:'Fases de combate e lideranca estrategica'},
+  {id:52, name:'Kate Bishop',              cls:'skill',tier:'S',e:'🏹',def:71,tip:'Flechas precisas e acrobacias'},
+  {id:53, name:'Okoye',                    cls:'skill',tier:'S',e:'⚔️',def:62,tip:'Guerreira Dora Milaje e lanca vibranium'},
+  {id:54, name:'Shang-Chi',               cls:'skill',tier:'S',e:'🥋',def:52,tip:'Mestre de artes marciais'},
+  {id:55, name:'Aegon',                    cls:'skill',tier:'A',e:'🏆',def:52,tip:'Poder acumulativo por combo'},
+  {id:56, name:'Valquiria',               cls:'skill',tier:'S',e:'⚔️',def:82,tip:'Guerreira asgardiana e Toda-Morte'},
+  {id:57, name:'Crossbones',               cls:'skill',tier:'S',e:'💀',def:91,tip:'Furia crescente - top defensor'},
+  {id:58, name:"Chee'ilth",               cls:'skill',tier:'S',e:'🦑',def:71,tip:'Alienigena com habilidades unicas'},
+  {id:59, name:'Bullseye',                 cls:'skill',tier:'S',e:'🎯',def:92,tip:'Precisao letal e projeteis mortais'},
+  {id:60, name:'Mole Man',                 cls:'skill',tier:'S',e:'🦠',def:72,tip:'Monstros subtterraneos e bastao'},
+  {id:61, name:'Falcao',                   cls:'skill',tier:'S',e:'🦅',def:62,tip:'Asa mecanica e Redwing'},
+  {id:62, name:'Mantis',                   cls:'skill',tier:'S',e:'🌸',def:71,tip:'Empatia e controle mental'},
+  {id:63, name:'Lumatrix',                 cls:'skill',tier:'S',e:'🔮',def:81,tip:'Energia e combate unico'},
+  {id:64, name:'Yelena Belova',            cls:'skill',tier:'S',e:'🏹',def:92,tip:'Viuva Negra letal e precisa'},
+  {id:65, name:'Kingpin',                  cls:'skill',tier:'S',e:'💼',def:71,tip:'Forca bruta e lideranca criminal'},
+  {id:66, name:'Hit-Monkey',               cls:'skill',tier:'S',e:'🐒',def:72,tip:'Macaco assassino com pistolas'},
+  {id:67, name:'Masacre',                  cls:'skill',tier:'A',e:'🗡️',def:62,tip:'Mercenario com laminas afiadas'},
+  {id:68, name:'Barao Zemo',              cls:'skill',tier:'S',e:'🎭',def:83,tip:'Tatica superior e Blitzkrieg'},
+  {id:69, name:'Gata Negra',               cls:'skill',tier:'S',e:'🐱',def:64,tip:'Azar e roubo de habilidades'},
+  {id:70, name:'H-A Traje Furtivo',        cls:'skill',tier:'S',e:'🕷️',def:73,tip:'Traje furtivo e esquiva'},
+  {id:71, name:'Pantera Negra (GC)',       cls:'skill',tier:'S',e:'🐾',def:64,tip:'Armadura vibranium e contra-ataque'},
+  {id:72, name:'Franken-Castle',           cls:'skill',tier:'S',e:'🔫',def:72,tip:'Punisher zumbi com arsenal pesado'},
+  {id:73, name:'Elsa Bloodstone',          cls:'skill',tier:'A',e:'🎯',def:64,tip:'Cacadora de monstros'},
+  {id:74, name:'Blade',                    cls:'skill',tier:'S',e:'🗡️',def:62,tip:'Cacador de vampiros e imunidade'},
+  {id:75, name:'Attuma',                   cls:'skill',tier:'A',e:'🌊',def:83,tip:'Guerreiro atlante e forca submarina'},
+  {id:76, name:'Pantera Jabari',           cls:'skill',tier:'S',e:'🦁',def:83,tip:'Guerreiro e forca de M\'Baku'},
+  {id:77, name:'Pantera Negra Classico',  cls:'skill',tier:'B',e:'🐾',def:58,tip:'Rei do Wakanda e vibranium'},
+  {id:78, name:'Gwenpool',                 cls:'skill',tier:'B',e:'🗡️',def:55,tip:'Quebra da 4a parede e combate caotico'},
+  {id:79, name:'Viuva Negra (DO)',         cls:'skill',tier:'B',e:'🕷️',def:73,tip:'Origem Mortal e veneno eletrico'},
+  {id:80, name:'Gaviao Arqueiro',          cls:'skill',tier:'B',e:'🏹',def:58,tip:'Flechas especiais e precisao'},
+  {id:81, name:'Moondragon',               cls:'skill',tier:'A',e:'🌙',def:73,tip:'Poderes telequineticos e disciplina'},
+  {id:82, name:'Thor (Ragnarok)',          cls:'skill',tier:'B',e:'⚡',def:72,tip:'Thor gladiador sem Mjolnir'},
+  {id:83, name:'Patriota',                 cls:'skill',tier:'S',e:'🛡️',def:63,tip:'Eli Bradley e escudo sonico'},
+  {id:84, name:'Ronin',                    cls:'skill',tier:'B',e:'⚔️',def:55,tip:'Guerreiro sem identidade definida'},
+  {id:85, name:'Night Thrasher',           cls:'skill',tier:'A',e:'🛹',def:55,tip:'Skatista vigilante de Nova York'},
+  {id:86, name:'Garota-Esquilo',           cls:'skill',tier:'B',e:'🐿️',def:55,tip:'Esquilos e forca surpreendente'},
+  {id:87, name:'Demolidor (HK)',           cls:'skill',tier:'C',e:'⚖️',def:55,tip:'Radar e habilidades de combate'},
+  {id:88, name:'Korg',                     cls:'skill',tier:'A',e:'🪨',def:92,tip:'Pedra viva e humor seco'},
+  {id:89, name:'Karnak',                   cls:'skill',tier:'B',e:'👊',def:58,tip:'Encontra a falha em qualquer coisa'},
+  {id:90, name:'Killmonger',               cls:'skill',tier:'A',e:'⚔️',def:83,tip:'Vibranium e ressurreicao'},
+  {id:91, name:'Silver Sable',             cls:'skill',tier:'A',e:'🐺',def:62,tip:'Mercenaria de elite'},
+  {id:92, name:'Misty Knight',             cls:'skill',tier:'B',e:'🦾',def:83,tip:'Braco bionico e combate corpo-a-corpo'},
+  {id:93, name:'Agente Venom',             cls:'skill',tier:'A',e:'🕷️',def:63,tip:'Simbionte e habilidades militares'},
+  {id:94, name:'Soldado Invernal',         cls:'skill',tier:'C',e:'🦾',def:58,tip:'Braco bionico e combate tatico'},
+  {id:95, name:'Taskmaster',               cls:'skill',tier:'B',e:'🎭',def:64,tip:'Copia de habilidades e memoria fotorafica'},
+  {id:96, name:'Craven',                   cls:'skill',tier:'B',e:'🦁',def:83,tip:'Cacador supremo e venenos'},
+  {id:97, name:'Viuva Negra (OG)',         cls:'skill',tier:'C',e:'🕷️',def:58,tip:'Agente da SHIELD e disfrace'},
+  {id:98, name:'Punisher',                 cls:'skill',tier:'S',e:'💀',def:52,tip:'Guerra pessoal contra o crime'},
+  {id:99, name:'Elektra',                  cls:'skill',tier:'C',e:'⚔️',def:52,tip:'Sai e artes marciais ninjas'},
+  {id:100,name:'Cavaleiro da Lua',         cls:'skill',tier:'C',e:'🌙',def:52,tip:'Multiplas personalidades e luar'},
+  {id:101,name:'Demolidor Classico',       cls:'skill',tier:'C',e:'⚖️',def:52,tip:'Radar e advogado vigilante'},
+  /* ── MUTANTE ── */
+  {id:102,name:'Onslaught',                cls:'mutant',tier:'S',e:'💢',def:88,tip:'Fusao de Xavier e Magneto'},
+  {id:103,name:'Kitty Pryde',              cls:'mutant',tier:'S',e:'👻',def:84,tip:'Faseamento e intangibilidade'},
+  {id:104,name:'Sr. Sinistro',             cls:'mutant',tier:'S',e:'🧬',def:84,tip:'Manipulacao genetica e poderes copiados'},
+  {id:105,name:'Deadpool (X-Force)',       cls:'mutant',tier:'S',e:'🗡️',def:55,tip:'Regeneracao e merc com a boca'},
+  {id:106,name:'Dazzler',                  cls:'mutant',tier:'S',e:'🌈',def:73,tip:'Converte som em luz laser'},
+  {id:107,name:'Ciclope (Time Azul)',      cls:'mutant',tier:'S',e:'🔴',def:65,tip:'Rajadas opticas poderosas'},
+  {id:108,name:'Jean Grey',               cls:'mutant',tier:'S',e:'🔥',def:92,tip:'Telepatia e telecinesia extremas'},
+  {id:109,name:'Domino',                   cls:'mutant',tier:'S',e:'🎲',def:92,tip:'Probabilidade e sorte extrema'},
+  {id:110,name:'Bispo',                    cls:'mutant',tier:'A',e:'⚡',def:83,tip:'Absorcao de energia e contra-ataque'},
+  {id:111,name:'Magneto',                  cls:'mutant',tier:'A',e:'🔴',def:84,tip:'Controle magnetico supremo'},
+  {id:112,name:'Omega Red',                cls:'mutant',tier:'S',e:'🟠',def:65,tip:'Tentaculos de carbonadium e drain'},
+  {id:113,name:'Arcanjo',                  cls:'mutant',tier:'S',e:'🦅',def:55,tip:'Asas de metal e neurotoxina'},
+  {id:114,name:'Gentle',                   cls:'mutant',tier:'S',e:'💫',def:83,tip:'Vibranium nos ossos e forca extrema'},
+  {id:115,name:'Samurai de Prata',         cls:'mutant',tier:'S',e:'⚔️',def:62,tip:'Armadura de samurai e katana'},
+  {id:116,name:'Capitao Britania',         cls:'mutant',tier:'S',e:'🇬🇧',def:92,tip:'Forca e poder cosmico britanico'},
+  {id:117,name:'Apocalipse',              cls:'mutant',tier:'S',e:'🩸',def:84,tip:'Poder extremo e imunidade a debuffs'},
+  {id:118,name:'Namor',                    cls:'mutant',tier:'A',e:'🌊',def:65,tip:'Rei de Atlantida e forca aquatica'},
+  {id:119,name:'Havok',                    cls:'mutant',tier:'S',e:'💥',def:73,tip:'Raios de plasma e absorcao'},
+  {id:120,name:'Tempestade',               cls:'mutant',tier:'A',e:'⛈️',def:60,tip:'Controle climatico'},
+  {id:121,name:'Professor X',              cls:'mutant',tier:'S',e:'🧠',def:83,tip:'Controle mental e telepatia'},
+  {id:122,name:'Sunspot',                  cls:'mutant',tier:'S',e:'☀️',def:64,tip:'Energia solar e forca'},
+  {id:123,name:'Dani Moonstar',            cls:'mutant',tier:'S',e:'🌙',def:64,tip:'Ilusoes e flechas psiquicas'},
+  {id:124,name:'Dust',                     cls:'mutant',tier:'S',e:'🌪️',def:83,tip:'Forma de areia e intangibilidade'},
+  {id:125,name:'Wolverine (Arma X)',       cls:'mutant',tier:'A',e:'🟡',def:92,tip:'Regeneracao extrema e adamantium'},
+  {id:126,name:'Colosso',                  cls:'mutant',tier:'A',e:'🔩',def:55,tip:'Corpo de aco organico'},
+  {id:127,name:'Noturno',                  cls:'mutant',tier:'A',e:'💙',def:83,tip:'Teletransporte e escalada'},
+  {id:128,name:'Negasonic',               cls:'mutant',tier:'S',e:'💣',def:72,tip:'Explosoes e detonacao negativa'},
+  {id:129,name:'Cassandra Nova',           cls:'mutant',tier:'S',e:'👁️',def:83,tip:'Clone psiquico e terror mental'},
+  {id:130,name:'Homem de Gelo',            cls:'mutant',tier:'S',e:'🧊',def:73,tip:'Congelamento e armadura de gelo'},
+  {id:131,name:'Emma Frost',               cls:'mutant',tier:'S',e:'💎',def:72,tip:'Forma de diamante e telepatia'},
+  {id:132,name:'Gambit',                   cls:'mutant',tier:'A',e:'♠️',def:55,tip:'Baralho com carga cinetica'},
+  {id:133,name:'Tempestade Pyramid X',     cls:'mutant',tier:'S',e:'⛈️',def:84,tip:'Poder tempestuoso amplificado'},
+  {id:134,name:'Sapo',                     cls:'mutant',tier:'S',e:'🐸',def:83,tip:'Lingua e saliva paralisante'},
+  {id:135,name:'Stryfe',                   cls:'mutant',tier:'A',e:'💢',def:72,tip:'Clone de Cable com poder telequinetico'},
+  {id:136,name:'Ladra (Rogue)',            cls:'mutant',tier:'A',e:'💨',def:58,tip:'Absorcao de poderes e memorias'},
+  {id:137,name:'Velho Logan',              cls:'mutant',tier:'C',e:'🧓',def:55,tip:'Wolverine envelhecido e experiente'},
+  {id:138,name:'Jubileu',                  cls:'mutant',tier:'B',e:'🎆',def:52,tip:'Fogos de artificio e plasma'},
+  {id:139,name:'X-23',                     cls:'mutant',tier:'S',e:'⚔️',def:55,tip:'Clone feminino de Wolverine'},
+  {id:140,name:'Sauron',                   cls:'mutant',tier:'A',e:'🦖',def:83,tip:'Vampiro pterossauro e dreno de energia'},
+  {id:141,name:'Wolverine',                cls:'mutant',tier:'B',e:'🟡',def:55,tip:'Garras de adamantium e furia'},
+  {id:142,name:'Magneto (Marvel Now)',     cls:'mutant',tier:'C',e:'🧲',def:72,tip:'Controle magnetico e metal'},
+  {id:143,name:'Northstar',                cls:'mutant',tier:'A',e:'⭐',def:60,tip:'Velocidade de voo extrema'},
+  {id:144,name:'Dente-de-Sabre',           cls:'mutant',tier:'A',e:'🐯',def:83,tip:'Furia e regeneracao animal'},
+  {id:145,name:'Psylocke',                 cls:'mutant',tier:'B',e:'💜',def:55,tip:'Lamina psiquica e telepatia'},
+  {id:146,name:'Cabo (Cable)',             cls:'mutant',tier:'A',e:'🔧',def:64,tip:'Biotecnologia e armas do futuro'},
+  {id:147,name:'Fera (Beast)',             cls:'mutant',tier:'C',e:'🦁',def:52,tip:'Inteligencia e forca bestial'},
+  {id:148,name:'Goldpool',                 cls:'mutant',tier:'C',e:'🥇',def:52,tip:'Deadpool dourado e regeneracao'},
+  {id:149,name:'Ciclope Classico',         cls:'mutant',tier:'C',e:'🔴',def:55,tip:'Rajadas opticas e lideranca'},
+  /* ── TECNOLOGIA ── */
+  {id:150,name:'Formiga-Homem (Futuro)',   cls:'tech',tier:'S',e:'🐜',def:93,tip:'Tecnologia futurista de miniaturizacao'},
+  {id:151,name:'Shuri',                    cls:'tech',tier:'S',e:'🔬',def:83,tip:'Genio do Wakanda e armaduras'},
+  {id:152,name:'Jack O\'Lantern',          cls:'tech',tier:'S',e:'🎃',def:72,tip:'Explosivos e discos de abobora'},
+  {id:153,name:'Bastion',                  cls:'tech',tier:'S',e:'🤖',def:52,tip:'Primo Sentinela e anti-mutante'},
+  {id:154,name:'Ghost',                    cls:'tech',tier:'S',e:'👻',def:55,tip:'Intangibilidade e fase passiva'},
+  {id:155,name:'Nimrod',                   cls:'tech',tier:'S',e:'🤖',def:72,tip:'Sentinela do futuro adaptativo'},
+  {id:156,name:'Warlock',                  cls:'tech',tier:'S',e:'🔮',def:71,tip:'Tecno-organico e absorcao'},
+  {id:157,name:'Prowler',                  cls:'tech',tier:'S',e:'🕷️',def:72,tip:'Ladrao tecnologico e garras'},
+  {id:158,name:'Nebula',                   cls:'tech',tier:'S',e:'💙',def:55,tip:'Ciborgue cosmica e choque eletrico'},
+  {id:159,name:'Stark H-A',               cls:'tech',tier:'S',e:'🕷️',def:52,tip:'Armadura Stark e sentido de aranha'},
+  {id:160,name:'Guardiao',                 cls:'tech',tier:'S',e:'🇨🇦',def:64,tip:'Armadura canadense e energia'},
+  {id:161,name:'Shocker',                  cls:'tech',tier:'S',e:'⚡',def:72,tip:'Vibracoes sonicas e choque'},
+  {id:162,name:'Sentinela (Sentinel)',     cls:'tech',tier:'A',e:'🤖',def:93,tip:'Cacador de mutantes programavel'},
+  {id:163,name:'Hulkbuster',               cls:'tech',tier:'A',e:'🔴',def:72,tip:'Armadura de reforco do Iron Man'},
+  {id:164,name:'Iron Man (OG)',            cls:'tech',tier:'A',e:'🔴',def:60,tip:'Armadura original e reator arc'},
+  {id:165,name:'Ultron',                   cls:'tech',tier:'A',e:'🦾',def:71,tip:'Auto-reparo e imunidade a veneno'},
+  {id:166,name:'Ironheart',                cls:'tech',tier:'A',e:'💜',def:72,tip:'Armadura de proxima geracao'},
+  {id:167,name:'Arnim Zola',               cls:'tech',tier:'A',e:'🧠',def:93,tip:'Cientista Hydra transplantado em maquina'},
+  {id:168,name:'O Criador (Maker)',        cls:'tech',tier:'A',e:'🔬',def:71,tip:'Reed Richards maligno do Universo 1610'},
+  {id:169,name:'Lady Deathstrike',         cls:'tech',tier:'B',e:'⚔️',def:68,tip:'Garras de adamantium e regeneracao'},
+  {id:170,name:'Howard, O Pato',           cls:'tech',tier:'B',e:'🦆',def:60,tip:'Pato de outro universo'},
+  {id:171,name:'Mysterio',                 cls:'tech',tier:'B',e:'🌫️',def:83,tip:'Ilusionista e gas paralisante'},
+  {id:172,name:'Viv Vision',               cls:'tech',tier:'B',e:'💚',def:83,tip:'Filha de Visao e poderes unicos'},
+  {id:173,name:'Guillotine 2099',          cls:'tech',tier:'B',e:'⚔️',def:83,tip:'Absorcao de alma do futuro'},
+  {id:174,name:'Arcade',                   cls:'tech',tier:'B',e:'🎮',def:83,tip:'Armadilhas mortais e controle total'},
+  {id:175,name:'Omega Sentinela',          cls:'tech',tier:'B',e:'🤖',def:83,tip:'Cyborg anti-mutante evoluido'},
+  {id:176,name:'Peni Parker',              cls:'tech',tier:'B',e:'🕷️',def:83,tip:'SP//dr e robo simbionte'},
+  {id:177,name:'Iron Man Infame',          cls:'tech',tier:'B',e:'🔴',def:71,tip:'Doom como Iron Man'},
+  {id:178,name:'Rocket Raccoon',           cls:'tech',tier:'B',e:'🦝',def:55,tip:'Armas pesadas e engenharia'},
+  {id:179,name:'Senhor das Estrelas',      cls:'tech',tier:'B',e:'🌟',def:55,tip:'Pistolas de plasma e lideranca'},
+  {id:180,name:'Caveira Vermelha',         cls:'tech',tier:'B',e:'💀',def:93,tip:'Lider Hydra e cubo cosmico'},
+  {id:181,name:'Cap. America (SW)',        cls:'tech',tier:'A',e:'🛡️',def:72,tip:'Sam Wilson com as asas de Falcao — GuiaMTC 8.5/10'},
+  {id:182,name:'Iron Man (GI)',            cls:'tech',tier:'C',e:'🤖',def:71,tip:'Armadura nanite e Guerra Infinita'},
+  {id:183,name:'Guerreiro Civil',          cls:'tech',tier:'C',e:'⚔️',def:55,tip:'Capitao America alternativo'},
+  {id:184,name:'Yondu',                    cls:'tech',tier:'S',e:'🎵',def:93,tip:'Flecha teleguiada por assobio — GuiaMTC 9.5/10'},
+  {id:185,name:'Darkhawk',                 cls:'tech',tier:'C',e:'🦅',def:83,tip:'Armadura cosmica e poder alien'},
+  {id:186,name:'Doutor Polvo',             cls:'tech',tier:'C',e:'🐙',def:62,tip:'Tentaculos de adamantium'},
+  {id:187,name:'Maquina de Combate',       cls:'tech',tier:'C',e:'💣',def:60,tip:'Arsenal militar pesado'},
+  {id:188,name:'Punisher 2099',            cls:'tech',tier:'C',e:'🔫',def:71,tip:'Punisher do futuro com armas laser'},
+  {id:189,name:'Duende Verde',             cls:'tech',tier:'C',e:'🎃',def:62,tip:'Aboboras explosivas e planador'},
+  {id:190,name:'Psico-Homem',              cls:'tech',tier:'C',e:'🧠',def:83,tip:'Controle emocional e panico'},
+  {id:191,name:'Visao',                    cls:'tech',tier:'C',e:'💚',def:62,tip:'Sintezoide e raios de feixe solar'},
+  {id:192,name:'Centuriao de Prata',       cls:'tech',tier:'C',e:'🔴',def:62,tip:'Armadura Mark VIII alternativa'},
+  {id:193,name:'Abutre',                   cls:'tech',tier:'C',e:'🦅',def:60,tip:'Asas mecanicas e roubo de energia'},
+  {id:194,name:'Patriota de Ferro',        cls:'tech',tier:'C',e:'🇺🇸',def:52,tip:'Armadura patriotica do Rhodey'},
+  {id:195,name:'Kang',                     cls:'tech',tier:'C',e:'⌛',def:52,tip:'Conquistador do tempo'},
+  /* ── COSMICO ── */
+  {id:196,name:'Hercules',                 cls:'cosmic',tier:'S',e:'💪',def:73,tip:'Feitos de Forca e dano extremo'},
+  {id:197,name:'MF Cosmico',               cls:'cosmic',tier:'S',e:'🔥',def:73,tip:'Poder cosmico e chamas infernais'},
+  {id:198,name:'Hulkling',                 cls:'cosmic',tier:'S',e:'💚',def:83,tip:'Forma mutante cosmica e regeneracao'},
+  {id:199,name:'A Serpente',               cls:'cosmic',tier:'S',e:'🐍',def:93,tip:'Deus do medo e terror absoluto'},
+  {id:200,name:'Karolina Dean',            cls:'cosmic',tier:'S',e:'🌈',def:72,tip:'Energia solar e luz de aliens'},
+  {id:201,name:'Adam Warlock',             cls:'cosmic',tier:'S',e:'✨',def:83,tip:'Cocoon e ressurreicao cosmica'},
+  {id:202,name:'Corvus Glaive',            cls:'cosmic',tier:'S',e:'🔱',def:64,tip:'Imortalidade pela lanca'},
+  {id:203,name:'Hyperion',                 cls:'cosmic',tier:'S',e:'☀️',def:83,tip:'Ameaca constante com Especial 3'},
+  {id:204,name:'Grito (Scream)',           cls:'cosmic',tier:'S',e:'😱',def:64,tip:'Simbionte feminino e furia'},
+  {id:205,name:'Galan',                    cls:'cosmic',tier:'S',e:'🌌',def:83,tip:'Devorador de mundos em forma humana'},
+  {id:206,name:'Gladiador',                cls:'cosmic',tier:'S',e:'⚡',def:72,tip:'Forca supreme e autoconfianca'},
+  {id:207,name:'Venom',                    cls:'cosmic',tier:'S',e:'🖤',def:72,tip:'Simbionte e forca descomunal'},
+  {id:208,name:'Medusa',                   cls:'cosmic',tier:'S',e:'👸',def:83,tip:'Cabelo prehensil e forca inumana'},
+  {id:209,name:'Cull Obsidian',            cls:'cosmic',tier:'S',e:'🔨',def:64,tip:'Forca bruta e escudo negro'},
+  {id:210,name:'Capita Marvel (Filme)',    cls:'cosmic',tier:'A',e:'⭐',def:60,tip:'Energia binaria e voo'},
+  {id:211,name:'Knull',                    cls:'cosmic',tier:'S',e:'🌑',def:83,tip:'Deus dos simbiontes e escuridao'},
+  {id:212,name:'Angela',                   cls:'cosmic',tier:'S',e:'⚔️',def:83,tip:'Anjo asgardiano e combate de laminas — GuiaMTC 9/10'},
+  {id:213,name:'Gamora',                   cls:'cosmic',tier:'A',e:'💚',def:55,tip:'A mais perigosa do universo'},
+  {id:214,name:'Proxima Midnight',         cls:'cosmic',tier:'B',e:'🌙',def:55,tip:'Lanca de estrela e sangramento'},
+  {id:215,name:'Hela',                     cls:'cosmic',tier:'B',e:'🖤',def:60,tip:'Ressurreicao e dominio da morte'},
+  {id:216,name:'Venompool',                cls:'cosmic',tier:'A',e:'🗡️',def:62,tip:'Simbionte do Deadpool'},
+  {id:217,name:'King Groot',               cls:'cosmic',tier:'A',e:'👑',def:72,tip:'Groot rei e resistencia'},
+  {id:218,name:'Beta Ray Bill',            cls:'cosmic',tier:'S',e:'⚡',def:64,tip:'Digno de Mjolnir e poder asgardiano'},
+  {id:219,name:'Visao (Aarkus)',           cls:'cosmic',tier:'S',e:'🔮',def:83,tip:'Visao cosmica original'},
+  {id:220,name:'Silver Surfer',            cls:'cosmic',tier:'A',e:'🪙',def:83,tip:'Poder do Espaco Cosmico'},
+  {id:221,name:'Vox',                      cls:'cosmic',tier:'S',e:'🎵',def:72,tip:'Inumano e poder da voz'},
+  {id:222,name:'Carnificina',              cls:'cosmic',tier:'B',e:'🩸',def:64,tip:'Simbionte assassino de Kasady'},
+  {id:223,name:'Duende Vermelho',          cls:'cosmic',tier:'B',e:'🎃',def:72,tip:'Simbionte do Duende Verde'},
+  {id:224,name:'Venom o Pato',             cls:'cosmic',tier:'S',e:'🦆',def:62,tip:'Howard o Pato com simbionte'},
+  {id:225,name:'Ikaris',                   cls:'cosmic',tier:'B',e:'🌟',def:83,tip:'Eterno com raios opticos'},
+  {id:226,name:'Odin',                     cls:'cosmic',tier:'A',e:'👴',def:60,tip:'Rei Asgardiano e Forca Odinica'},
+  {id:227,name:'Sersi',                    cls:'cosmic',tier:'A',e:'💫',def:83,tip:'Eterna e transmutacao de materia'},
+  {id:228,name:'Thor',                     cls:'cosmic',tier:'A',e:'⚡',def:60,tip:'Deus do Trovao e Mjolnir'},
+  {id:229,name:'Gorr',                     cls:'cosmic',tier:'A',e:'🌑',def:72,tip:'Massacrador de Deuses e Todo-Espada'},
+  {id:230,name:'H-I (Superior)',           cls:'cosmic',tier:'S',e:'🔴',def:60,tip:'Tony Stark maligno e poderoso'},
+  {id:231,name:'Super-Skrull',             cls:'cosmic',tier:'S',e:'👽',def:93,tip:'Poderes combinados do Quarteto — GuiaMTC 9.5/10'},
+  {id:232,name:'Heimdall',                 cls:'cosmic',tier:'S',e:'👁️',def:90,tip:'Guarda do Arco-Iris e visao cosmica — GuiaMTC 9/10'},
+  {id:233,name:'Terrax',                   cls:'cosmic',tier:'A',e:'🌍',def:93,tip:'Heraldo de Galactus e poder cosmico'},
+  {id:234,name:'Aniquilacao',              cls:'cosmic',tier:'B',e:'🦟',def:83,tip:'Onda de aniquilacao e destruicao'},
+  {id:235,name:'H-A Simbionte',            cls:'cosmic',tier:'C',e:'🕷️',def:58,tip:'Peter Parker com simbionte'},
+  {id:236,name:'Capita Marvel Classica',   cls:'cosmic',tier:'C',e:'⭐',def:58,tip:'Potencias binarias originais'},
+  {id:237,name:'Srta. Marvel (Kamala)',    cls:'cosmic',tier:'C',e:'🌟',def:55,tip:'Polimorfismo e inspiracao heroica'},
+  {id:238,name:'O Campeao',               cls:'cosmic',tier:'A',e:'🏆',def:64,tip:'Lutador cosmico da Coletividade'},
+  {id:239,name:'Nova',                     cls:'cosmic',tier:'A',e:'💫',def:83,tip:'Forca Nova e poder cosmico'},
+  {id:240,name:'Fenix',                    cls:'cosmic',tier:'A',e:'🔥',def:55,tip:'Forca Fenix e ressurreicao'},
+  {id:241,name:'Ronan',                    cls:'cosmic',tier:'B',e:'⚖️',def:55,tip:'Acusador com martelo universal'},
+  {id:242,name:'Parafuso Negro',           cls:'cosmic',tier:'C',e:'🔊',def:58,tip:'Grito aniquilador inumano'},
+  {id:243,name:'Groot',                    cls:'cosmic',tier:'C',e:'🌳',def:52,tip:'Arvore alienigena simples'},
+  {id:244,name:'Thanos',                   cls:'cosmic',tier:'C',e:'💜',def:52,tip:'Ita Louco em busca das Joias'},
+  {id:245,name:'Drax',                     cls:'cosmic',tier:'C',e:'💚',def:52,tip:'Destruidor e cacador de Thanos'},
+  /* ── MISTICO ── */
+  {id:246,name:'Doutor Destino',           cls:'mystic',tier:'S',e:'🤖',def:83,tip:'Ditador genial e feiticaria suprema'},
+  {id:247,name:'Juggernaut',               cls:'mystic',tier:'S',e:'💢',def:64,tip:'Imparavel e forca descomunal'},
+  {id:248,name:'America Chavez',           cls:'mystic',tier:'S',e:'⭐',def:83,tip:'Soco dimensional e forca suprema'},
+  {id:249,name:'Kushala',                  cls:'mystic',tier:'S',e:'🐺',def:64,tip:'Apache com poder do Espírito do Vento'},
+  {id:250,name:'Nico Minoru',              cls:'mystic',tier:'S',e:'✨',def:93,tip:'Cajado magico unico e imprevisivel'},
+  {id:251,name:'H-A Pavitr Prabhakar',     cls:'mystic',tier:'S',e:'🕷️',def:64,tip:'H-A indiano com poderes unicos'},
+  {id:252,name:'O Capuz (The Hood)',       cls:'mystic',tier:'S',e:'🎭',def:64,tip:'Parker Robbins e pistolas infernais'},
+  {id:253,name:'Rintrah',                  cls:'mystic',tier:'S',e:'🐂',def:83,tip:'Discipulo do Feiticeiro Supremo'},
+  {id:254,name:'Shathra',                  cls:'mystic',tier:'S',e:'🕷️',def:72,tip:'Aranha-Wasp e veneno poderoso'},
+  {id:255,name:'Tigra',                    cls:'mystic',tier:'S',e:'🐯',def:83,tip:'Forca felina e garras afiadas'},
+  {id:256,name:'Homem de Absorcao',        cls:'mystic',tier:'S',e:'🪨',def:83,tip:'Absorcao de materiais e forca'},
+  {id:257,name:'Longshot',                 cls:'mystic',tier:'S',e:'🎲',def:73,tip:'Sorte extrema e crits em cascata'},
+  {id:258,name:'Magik',                    cls:'mystic',tier:'S',e:'⚔️',def:72,tip:'Lamina da Alma e Limbo'},
+  {id:259,name:'Doutor Estranho',          cls:'mystic',tier:'S',e:'🔮',def:58,tip:'Feiticeiro Supremo'},
+  {id:260,name:'Viuva Negra (CV)',         cls:'mystic',tier:'A',e:'🕷️',def:72,tip:'Versao mistica com poderes especiais'},
+  {id:261,name:'Feiticeira Escarlate',     cls:'mystic',tier:'A',e:'🔮',def:64,tip:'Magia do caos e debuffs'},
+  {id:262,name:'Diablo',                   cls:'mystic',tier:'S',e:'⚗️',def:72,tip:'Pocoes alquimicas e efeitos negativos'},
+  {id:263,name:'Wiccan',                   cls:'mystic',tier:'A',e:'🌙',def:64,tip:'Feiticeiro jovem e magia caotica'},
+  {id:264,name:'Homem Dragao',             cls:'mystic',tier:'A',e:'🐉',def:64,tip:'Forca e chama do dragao'},
+  {id:265,name:'H-A Supremo',              cls:'mystic',tier:'A',e:'🕷️',def:83,tip:'H-A com poderes do Feiticeiro'},
+  {id:266,name:'Tigre Branco',             cls:'mystic',tier:'S',e:'🐯',def:72,tip:'Amuleto de tigre e forca mistica'},
+  {id:267,name:'Espiral',                  cls:'mystic',tier:'S',e:'💫',def:64,tip:'Seis bracos e feiticaria alien'},
+  {id:268,name:'Lobisomem na Noite',       cls:'mystic',tier:'S',e:'🐺',def:72,tip:'Transformacao e furia lunar'},
+  {id:269,name:'Purgatorio',               cls:'mystic',tier:'S',e:'💀',def:60,tip:'Guardiao entre mundos'},
+  {id:270,name:'Sasquatch',                cls:'mystic',tier:'A',e:'🦁',def:83,tip:'Wendigo canadense e forca bruta'},
+  {id:271,name:'Supremo Simbionte',        cls:'mystic',tier:'S',e:'🌀',def:72,tip:'Magia e simbionte combinados'},
+  {id:272,name:'Doutor Voodoo',            cls:'mystic',tier:'S',e:'🥁',def:60,tip:'Possessao e controle do campo'},
+  {id:273,name:'Feiticeira Suprema',       cls:'mystic',tier:'A',e:'✨',def:64,tip:'Versao suprema da Feiticeira Escarlate'},
+  {id:274,name:'Mojo',                     cls:'mystic',tier:'S',e:'🎬',def:93,tip:'Tirano dimensional e entretenimento mortal'},
+  {id:275,name:'Wong',                     cls:'mystic',tier:'A',e:'📚',def:64,tip:'Assistente do Feiticeiro Supremo'},
+  {id:276,name:'O Destruidor',             cls:'mystic',tier:'A',e:'🤖',def:72,tip:'Armadura asgardiana de Odin'},
+  {id:277,name:'Isophyne',                 cls:'mystic',tier:'A',e:'💎',def:64,tip:'Ser mistico unico'},
+  {id:278,name:'Mordo',                    cls:'mystic',tier:'B',e:'🧙',def:83,tip:'Drena poder do adversario'},
+  {id:279,name:'Mefisto',                  cls:'mystic',tier:'A',e:'😈',def:83,tip:'Aura infernal e controle de almas'},
+  {id:280,name:'Ebony Maw',                cls:'mystic',tier:'A',e:'🌑',def:83,tip:'Telecinesia e servico a Thanos'},
+  {id:281,name:'Guilhotina',               cls:'mystic',tier:'B',e:'⚔️',def:60,tip:'Espada que absorve almas'},
+  {id:282,name:'Morningstar',              cls:'mystic',tier:'B',e:'⭐',def:64,tip:'Poder de madrugada e estrela'},
+  {id:283,name:'Kindred',                  cls:'mystic',tier:'A',e:'🕷️',def:93,tip:'Demonio ligado ao Homem-Aranha'},
+  {id:284,name:'Encantadora',              cls:'mystic',tier:'A',e:'🌸',def:93,tip:'Magia asgardiana e seducao'},
+  {id:285,name:'Motoqueiro Fantasma',      cls:'mystic',tier:'S',e:'🔥',def:58,tip:'Correntes infernais e Olhar da Penitencia'},
+  {id:286,name:'Man-Thing',                cls:'mystic',tier:'S',e:'🌿',def:83,tip:'Criatura do pantano e acido mistico'},
+  {id:287,name:'Thor (Jane Foster)',       cls:'mystic',tier:'S',e:'⚡',def:58,tip:'Thor digna com Mjolnir'},
+  {id:288,name:'Loki',                     cls:'mystic',tier:'C',e:'🐍',def:60,tip:'Deus da Maldade e ilusoes'},
+  {id:289,name:'Mangog',                   cls:'mystic',tier:'B',e:'💢',def:72,tip:'Odio de bilhoes e forca extrema'},
+  {id:290,name:'Dracula',                  cls:'mystic',tier:'S',e:'🧛',def:64,tip:'Rei dos vampiros e controle mental'},
+  {id:291,name:'Punho de Ferro',           cls:'mystic',tier:'C',e:'👊',def:52,tip:'Chi e golpe do Punho de Ferro'},
+  {id:292,name:'Colosso Imparavel',        cls:'mystic',tier:'C',e:'💢',def:52,tip:'Colosso com o poder de Cyttorak'},
+  {id:293,name:'Dormammu',                 cls:'mystic',tier:'B',e:'🌑',def:52,tip:'Mestre das trevas dimensionais'},
+  /* ── NOVOS — COSMICO ── */
+  {id:294,name:'Fenix Sombria',            cls:'cosmic',tier:'S',e:'🔥',def:93,tip:'Poder da Fenix corrompido — destruicao total'},
+  {id:295,name:'Thanos Sem Morte',         cls:'cosmic',tier:'S',e:'💜',def:91,tip:'Thanos imortal com joias do infinito'},
+  {id:296,name:'Imperiosa',               cls:'cosmic',tier:'S',e:'👑',def:83,tip:'Rainha cosmica e poder imperial'},
+  {id:297,name:'Maestro',                  cls:'cosmic',tier:'S',e:'💚',def:88,tip:'Hulk do futuro sombrio e dominador'},
+  {id:298,name:'Groot Rei Sem Morte',      cls:'cosmic',tier:'S',e:'🌳',def:85,tip:'Groot imortal com poder real'},
+  /* ── NOVOS — MUTANTE ── */
+  {id:299,name:'Pixie',                    cls:'mutant',tier:'S',e:'🧚',def:83,tip:'Poeira de fadas e magia mutante — GuiaMTC S'},
+  {id:300,name:'Platinumpool',             cls:'mutant',tier:'C',e:'🤖',def:75,tip:'Deadpool metalico e regeneracao premium'},
+  {id:301,name:'Wolverine (X-23 Laura)',   cls:'mutant',tier:'S',e:'⚔️',def:88,tip:'Clone feminino perfeito — GuiaMTC S'},
+  {id:302,name:'Magneto (HoX)',            cls:'mutant',tier:'A',e:'🧲',def:88,tip:'Magneto Planeta X — poder magnetico supremo'},
+  {id:303,name:'Ciclope Vermelho',         cls:'mutant',tier:'C',e:'🔴',def:73,tip:'Ciclope de universo alternativo'},
+  {id:304,name:'Deadpool OG',              cls:'mutant',tier:'B',e:'🗡️',def:55,tip:'Deadpool original com regeneracao'},
+  /* ── NOVOS — TECNOLOGIA ── */
+  {id:305,name:'Solvarch',                 cls:'tech',tier:'S',e:'🤖',def:83,tip:'Maquina de guerra tecnologica — GuiaMTC S'},
+  {id:306,name:'Cacador JJJ',              cls:'tech',tier:'S',e:'🕷️',def:72,tip:'Spider-Slayer de J. Jonah Jameson — GuiaMTC S'},
+  {id:307,name:'Ultron Prime',             cls:'tech',tier:'S',e:'🦾',def:83,tip:'Versao suprema do Ultron'},
+  {id:308,name:'Visao Sem Morte',          cls:'tech',tier:'S',e:'💚',def:88,tip:'Visao imortal com poder sintetico'},
+  {id:309,name:'Ruby Thursday',            cls:'tech',tier:'A',e:'💎',def:72,tip:'Vilã com cabeca de cristal energetico'},
+  {id:310,name:'Visao (GI)',               cls:'tech',tier:'B',e:'💚',def:72,tip:'Visao da Guerra Infinita'},
+  /* ── NOVOS — CIENCIA ── */
+  {id:311,name:'Maravilha Azul',           cls:'science',tier:'S',e:'🔵',def:88,tip:'Poder cosmico e absorcao de energia'},
+  {id:312,name:'Hulka Imortal',            cls:'science',tier:'S',e:'💚',def:88,tip:'She-Hulk imortal com furia crescente'},
+  {id:313,name:'Wave',                     cls:'science',tier:'A',e:'🌊',def:72,tip:'Heroina filipina com poder aquatico'},
+];
+
+/* ══════════════════════════════════════════════════
+   NOS DE GUERRA DE ALIANCAS
+══════════════════════════════════════════════════ */
+const NODES = [
+  // ── SEÇÃO 1: CAMINHOS 1–2 (N1–N10) ── 10 jogadores × 5 nós = 50 nós total
+  // Caminho 1 — Regeneração + Inbloqueável (N1–N5)
+  {id:1, name:'Regen. Inicial',     tag:'Regen+Inblock',       col:'#4CAF50',desc:'Regen. passiva 3% HP/8s. Especial 1 inbloqueável. Wolverine e X-23 são ideais: regen constante dificulta qualquer atacante.',                   defs:['Wolverine (Arma X)','X-23','Crossbones']},
+  {id:2, name:'Regen. Crescente',   tag:'Regen+Inblock',       col:'#4CAF50',desc:'Regen. acumula com cada buff ativo. Especial 2 inbloqueável. Mojo e Omega Red potencializam com efeitos múltiplos.',                             defs:['Mojo','Omega Red','Wolverine (Arma X)']},
+  {id:3, name:'Regen. ao Bloquear', tag:'Regen+Inblock',       col:'#4CAF50',desc:'Defensor regenera a cada bloqueio. Especiais sempre inbloqueáveis. Crossbones com fúria + regen acumulada é muito difícil.',                     defs:['Crossbones','Omega Red','X-23']},
+  {id:4, name:'Regen. Crítica',     tag:'Regen+Inblock',       col:'#4CAF50',desc:'Ao atingir 40% HP, regenera 25% instantaneamente. Wolverine (Arma X) é o melhor: regen extrema + adamantium.',                                  defs:['Wolverine (Arma X)','X-23','Mojo']},
+  {id:5, name:'Regen. Limite',      tag:'Regen+Inblock',       col:'#4CAF50',desc:'Ao atingir 10% HP, regenera até 50%. Nó mais difícil do caminho 1. Crossbones + regen máxima elimina muitos atacantes.',                        defs:['Crossbones','Wolverine (Arma X)','Omega Red']},
+  // Caminho 2 — Placebo + Choque + Raiz (N6–N10)
+  {id:6, name:'Placebo Estático',   tag:'Placebo+Choque',      col:'#e74c3c',desc:'Placebo suprime buffs ofensivos do atacante. Ghost é #1: intangibilidade é passiva, não buff — imune ao placebo.',                              defs:['Ghost','Nimrod','Domino']},
+  {id:7, name:'Raiz Elétrica',      tag:'Choque+Raiz',         col:'#e74c3c',desc:'Atacante enraizado ao bloquear; choque aplica ao expirar raiz. Ghost e Domino têm habilidades passivas que ignoram o choque.',                  defs:['Ghost','Domino','Nimrod']},
+  {id:8, name:'Campo Elétrico',     tag:'Placebo+Choque+Raiz', col:'#e74c3c',desc:'Qualquer buff do atacante gera choque. Placebo ativo. Nimrod é adaptativo; Domino usa probabilidade passiva — não buffs.',                      defs:['Nimrod','Ghost','Domino']},
+  {id:9, name:'Sobrecarga Estática',tag:'Placebo+Raiz',        col:'#e74c3c',desc:'Raiz + placebo simultâneos. Ghost é quase impossível de contra-atacar aqui; invisibilidade passiva não é removida.',                            defs:['Ghost','Photon','Domino']},
+  {id:10,name:'Colapso Elétrico',   tag:'Placebo+Choque+Raiz', col:'#e74c3c',desc:'Nó de pico C2: todos os três efeitos. Ghost é indiscutivelmente o melhor defensor do mapa neste tipo de nó.',                                  defs:['Ghost','Nimrod','Domino']},
+  // ── SEÇÃO 2: CAMINHOS 3–4 (N11–N20) ──
+  // Caminho 3 — Armadura + Autobloqueio + Desintegração (N11–N15)
+  {id:11,name:'Armadura Reativa',   tag:'Armadura+Autoblock',  col:'#3498db',desc:'Acumula armadura a cada golpe recebido. Autoblock ativa com 3 cargas. Colosso é o rei dos nós de armadura: passivas de ferro orgânico.',        defs:['Colosso','Juggernaut','Nimrod']},
+  {id:12,name:'Escudo Adaptativo',  tag:'Armadura+Desint.',    col:'#3498db',desc:'Armadura amplifica Desintegração; dano de energia reduzido 60%. Nimrod adapta resistências, Stark H-A gera armadura constante.',               defs:['Nimrod','Stark H-A','Colosso']},
+  {id:13,name:'Autoblock Ativo',    tag:'Autoblock+Desint.',   col:'#3498db',desc:'Autoblock remove debuffs; Desintegração após cada bloqueio. Juggernaut ativa Unstoppable Armor passivamente — sinergia perfeita.',              defs:['Juggernaut','Colosso','Warlock']},
+  {id:14,name:'Fortaleza de Aço',   tag:'Armadura+Autoblock',  col:'#3498db',desc:'Armadura máxima desde o início + autoblock frequente. Colosso + Juggernaut são os dois melhores defensores deste tipo de nó.',                 defs:['Colosso','Juggernaut','Nimrod']},
+  {id:15,name:'Desintegração Total',tag:'Desintegração',       col:'#3498db',desc:'Desintegração ignora armadura do atacante a cada 10 golpes. Warlock e Nimrod maximizam o dano por serem tech adaptativos.',                    defs:['Warlock','Nimrod','Colosso']},
+  // Caminho 4 — Inbloqueável + Controles Invertidos + Resistência (N16–N20)
+  {id:16,name:'Inversão Tática',    tag:'Inblock+Inverso',     col:'#9b59b6',desc:'Controles invertidos por 5s a cada 15s + especiais inbloqueáveis. Crossbones com fúria máxima é devastador.',                                  defs:['Crossbones','Juggernaut','A Serpente']},
+  {id:17,name:'Resistência Plena',  tag:'Resistência',         col:'#9b59b6',desc:'25% dos golpes não causam dano (resistência passiva). A Serpente tem terror + resist. passiva inata. Hyperion tem invulnerabilidade.',          defs:['A Serpente','Hyperion','Juggernaut']},
+  {id:18,name:'Especial Inblock.',  tag:'Inblock+Resist.',     col:'#9b59b6',desc:'Especiais inbloqueáveis + 40% chance de não sofrer dano. Crossbones enragado é imparável; A Serpente infunde terror no atacante.',             defs:['Crossbones','A Serpente','Hercules']},
+  {id:19,name:'Caos de Controles',  tag:'Inverso+Inblock',     col:'#9b59b6',desc:'Controles invertidos + ataques inbloqueáveis simultâneos. Juggernaut Unstoppable + Inblock = combinação extremamente difícil.',                defs:['Juggernaut','Crossbones','A Serpente']},
+  {id:20,name:'Muralha Inquebrável',tag:'Inblock+Inverso+Res.',col:'#9b59b6',desc:'Os 3 efeitos juntos — nó de pico C4. Um dos mais difíceis do mapa. A Serpente com terror + resistência é quase invencível aqui.',              defs:['A Serpente','Crossbones','Juggernaut']},
+  // ── SEÇÃO 3: CAMINHOS 5–6 (N21–N30) ──
+  // Caminho 5 — KD + Intercept + Falter (N21–N25)
+  {id:21,name:'KD em Bloco',        tag:'KD+Intercept.',       col:'#f1c40f',desc:'Knockdown ao bloquear especiais + interceptação automática. Hercules com feitos: dano massivo após KD. Bullseye intercepta precisamente.',      defs:['Hercules','Bullseye','Nick Fury']},
+  {id:22,name:'Hesitação Profunda', tag:'Falter+Intercept.',   col:'#f1c40f',desc:'Atacante perde 30% de ataque ao interceptar. Ghost é contra-intuitivo: o atacante que tenta interceptar hesita e cai.',                        defs:['Ghost','Aegon','Hercules']},
+  {id:23,name:'KD Automático',      tag:'KD+Falter',           col:'#f1c40f',desc:'A cada 10 golpes: knockdown automático. Bullseye e Nick Fury exploram knockdowns para ganhar poder e aplicar mais efeitos.',                   defs:['Bullseye','Nick Fury','Hercules']},
+  {id:24,name:'Intercept. Brutal',  tag:'Intercept.+KD',       col:'#f1c40f',desc:'Tentativa de intercept causa knockdown no atacante. Ghost com invisibilidade força o atacante a tentar interceptar e cair.',                   defs:['Ghost','Aegon','Bullseye']},
+  {id:25,name:'Pressão Máxima C5',  tag:'KD+Intercept.+Falter',col:'#f1c40f',desc:'Todos os 3 efeitos — nó mais difícil C5. Hercules é a melhor escolha: feitos + KD amplificado = eliminações garantidas.',                    defs:['Hercules','Ghost','Bullseye']},
+  // Caminho 6 — Invisibilidade + Proeza + Intimidação (N26–N30)
+  {id:26,name:'Sombra Tática',      tag:'Invisibilidade',      col:'#1abc9c',desc:'Invisibilidade a cada 15s; ataques invisíveis causam dano dobrado. Ghost é o melhor defensor invisível do MCOC — incomparável neste nó.',      defs:['Ghost','Photon','Kitty Pryde']},
+  {id:27,name:'Proeza Acumulada',   tag:'Proeza+Invis.',       col:'#1abc9c',desc:'Cargas de proeza ao entrar em invisibilidade; cada carga +15% dano. Onslaught acumula proeza passivamente, potencializado pela invisibilidade.',defs:['Onslaught','Ghost','Kitty Pryde']},
+  {id:28,name:'Intimidação Total',  tag:'Intimidação+Invis.',  col:'#1abc9c',desc:'Atacante com <50% HP sofre -30% ataque. Void com debuffs passivos + intimidação = defensor quase impossível de finalizar.',                    defs:['Void','Ghost','Onslaught']},
+  {id:29,name:'Névoa de Proeza',    tag:'Proeza+Intimidação',  col:'#1abc9c',desc:'Proeza intensifica intimidação; lutas longas favorecem muito o defensor. Onslaught com proeza máxima elimina atacantes enfraquecidos.',         defs:['Onslaught','Ghost','Kitty Pryde']},
+  {id:30,name:'Sombra + Temor',     tag:'Invis+Proeza+Intim.', col:'#1abc9c',desc:'Os 3 efeitos simultâneos — nó de pico C6, um dos mais temidos de S64/S65. Ghost + Onslaught são as únicas escolhas reais aqui.',              defs:['Ghost','Onslaught','Photon']},
+  // ── SEÇÃO 4: CAMINHOS 7–8–9 (N31–N40) ──
+  // Caminho 7 — Reflexo de Dano + Purificação (N31–N33)
+  {id:31,name:'Reflexo Inicial',    tag:'Reflexo de Dano',     col:'#e67e22',desc:'20% do dano ao defensor é refletido. Mefisto tem aura de reflexo inerente. Rintrah e Doutor Destino são S-tier místicos com reflexo amplificado.',defs:['Mefisto','Rintrah','Doutor Destino']},
+  {id:32,name:'Purificação Ativa',  tag:'Reflexo+Purific.',    col:'#e67e22',desc:'Defensor purifica 1 debuff a cada 8s; reflexo cresce após purificar. Doutor Voodoo possui purificação nativa + absorção de poder.',            defs:['Doutor Voodoo','Rintrah','Doutor Destino']},
+  {id:33,name:'Reflexo Máximo',     tag:'Reflexo+Purific.',    col:'#e67e22',desc:'35% reflexo + purificação a cada 5s. Defensor praticamente imune a DoTs. Mefisto + Rintrah são os melhores para este nó na meta S64/S65.',     defs:['Mefisto','Rintrah','Doutor Voodoo']},
+  // Caminho 8 — Ganho de Poder + Resistência (N34–N37)
+  {id:34,name:'Acúmulo de Poder',   tag:'Ganho Poder',         col:'#FFA500',desc:'Defensor ganha poder 50% mais rápido; resist. 20%. Mordo rouba poder do atacante. Diablo usa pocões com poder; Nick Fury tem fases de combate.',defs:['Mordo','Diablo','Nick Fury']},
+  {id:35,name:'Descarga Rápida',    tag:'Poder+Resist.',       col:'#FFA500',desc:'Ao atingir poder total: especial 2 imediato. Diablo lança pocões devastadoras; Mordo drena o poder do atacante após o especial.',              defs:['Diablo','Mordo','Doutor Voodoo']},
+  {id:36,name:'Reciclagem de Poder',tag:'Poder+Resist.',       col:'#FFA500',desc:'Após especial 3, recupera 50% do poder. Resistência prolonga indefinidamente. Mordo e Doutor Voodoo reciclam poder de forma muito eficiente.',  defs:['Mordo','Doutor Voodoo','Diablo']},
+  {id:37,name:'Resistência Total',  tag:'Poder+Resist.',       col:'#FFA500',desc:'Resistência máxima 35% + ganho de poder acelerado. Nick Fury com fases e resistência passiva é extremamente difícil de finalizar aqui.',       defs:['Nick Fury','Mordo','Diablo']},
+  // Caminho 9 — Hazard Shift (N38–N40)
+  {id:38,name:'Hazard: Fogo 🔥',   tag:'Hazard Shift',        col:'#ff4500',desc:'Defensor imune a incinerar. Atacante imune a incinerar sofre dano extra pelo Hazard. Void e Mefisto são imunes a fogo e têm alto poder base.',  defs:['Void','Mefisto','Diablo']},
+  {id:39,name:'Hazard: Veneno 🧪',  tag:'Hazard Shift',        col:'#2ecc71',desc:'Defensor imune a veneno. Atacante imune a veneno recebe dano amplificado. Apocalipse e Onslaught são imunes a veneno naturalmente.',            defs:['Apocalipse','Onslaught','Void']},
+  {id:40,name:'Hazard: Sangue 🩸',  tag:'Hazard Shift',        col:'#c0392b',desc:'Defensor imune a sangramento. Magneto (ferro no sangue) e Emma Frost (forma diamante) são naturalmente imunes a bleed.',                      defs:['Magneto','Emma Frost','X-23']},
+  // ── SEÇÃO 5: SUBS + BOSS ISLAND (N41–N50) ──
+  {id:41,name:'Sub — Central A',    tag:'SUB',                 col:'#607d8b',desc:'Bônus passivos de ataque/defesa. Void é o defensor mais versátil do jogo — funciona em qualquer nó e cria 12 tipos de debuff passivamente.',    defs:['Void','Ghost','Onslaught']},
+  {id:42,name:'Sub — Central B',    tag:'SUB + Timer',         col:'#607d8b',desc:'Timer de eliminação: atacante perde 5% HP/10s. Ghost com invisibilidade impede o atacante de recuperar tempo; Magneto com aura magnética.',     defs:['Ghost','Magneto','Apocalipse']},
+  {id:43,name:'Sub — Guardião A',   tag:'SUB + Guardião',      col:'#607d8b',desc:'Alta resistência + especiais com rampagem. Apocalipse é imune a debuffs e tem rampagem exponencial. Onslaught com proeza acumulada.',           defs:['Apocalipse','Onslaught','Void']},
+  {id:44,name:'Sub — Guardião B',   tag:'SUB + Inblock',       col:'#607d8b',desc:'Especiais inbloqueáveis + timer de eliminação. Super-Skrull com poderes múltiplos é altamente versátil; Crossbones com fúria máxima.',          defs:['Crossbones','Super-Skrull','Magneto']},
+  {id:45,name:'Sub — Bastião',      tag:'SUB + Regen.',        col:'#607d8b',desc:'Regen. + resistência — último nó antes da Boss Island. Wolverine (Arma X) e Onslaught devem eliminar o máximo de itens do atacante.',          defs:['Wolverine (Arma X)','Onslaught','Void']},
+  // Boss Island — 3 guardiões + Sub-Boss + Boss
+  {id:46,name:'Boss Guard — A',     tag:'Boss Island 🏝️',     col:'#ff6b00',desc:'1º guarda da Boss Island. Buffs crescentes + rampagem. Onslaught com proeza ilimitada é a melhor opção para fazer eliminações antes do boss.',  defs:['Onslaught','Super-Skrull','Jean Grey']},
+  {id:47,name:'Boss Guard — B',     tag:'Boss Island 🏝️',     col:'#ff6b00',desc:'2º guarda. Regen + autoblock para forçar gasto de itens. Wolverine (Arma X) aqui força o atacante a gastar recursos preciosos.',               defs:['Wolverine (Arma X)','Apocalipse','Ghost']},
+  {id:48,name:'Boss Guard — C',     tag:'Boss Island 🏝️',     col:'#ff6b00',desc:'3º guarda, imediatamente antes do Sub-Boss. A Serpente e Juggernaut — medo + resistência + especiais inbloqueáveis esgotam o atacante.',       defs:['A Serpente','Juggernaut','Crossbones']},
+  {id:49,name:'Sub-Chefe',          tag:'⚔️ Sub-Boss',         col:'#ff4444',desc:'Sub-boss com HP extremamente alta. Regen + Inblock + Ganho de Poder. Apocalipse é o melhor: imune a debuffs, regen passiva e poder infinito.',  defs:['Apocalipse','Void','Onslaught','Jean Grey']},
+  {id:50,name:'Chefe da Guerra',    tag:'💀 BOSS',             col:'#ff0000',desc:'BOSS final — N50. Defensor mais forte da aliança. Apocalipse é consenso #1 na meta S64/S65. Heimdall tem ressurreição passiva. Super-Skrull é imune a múltiplos efeitos.',defs:['Apocalipse','Heimdall','Onslaught','Super-Skrull','Jean Grey','Void']},
+];
+
+/* ══════════════════════════════════════════════════
+   ESTADO
+══════════════════════════════════════════════════ */
+const SEC_NAMES = [
+  'Caminhos 1–2 · Regen+Inblock / Placebo+Choque (N1–N10)',
+  'Caminhos 3–4 · Armadura+Desint. / Inblock+Inverso (N11–N20)',
+  'Caminhos 5–6 · KD+Intercept / Invis+Proeza (N21–N30)',
+  'Caminhos 7–8–9 · Reflexo / Ganho Poder / Hazard Shift (N31–N40)',
+  'SUBS + Boss Island (N41–N50)',
+];
+const PATH_GROUPS = [
+  [ // Seção 1 — 10 nós
+    {label:'Caminho 1', icon:'🔄', desc:'Regeneração + Inbloqueável',       slots:[0,1,2,3,4]},
+    {label:'Caminho 2', icon:'⚡', desc:'Placebo + Choque + Raiz',          slots:[5,6,7,8,9]},
+  ],
+  [ // Seção 2 — 10 nós
+    {label:'Caminho 3', icon:'🛡️', desc:'Armadura + Autoblock + Desint.',  slots:[0,1,2,3,4]},
+    {label:'Caminho 4', icon:'🌀', desc:'Inbloqueável + Inverso + Resist.', slots:[5,6,7,8,9]},
+  ],
+  [ // Seção 3 — 10 nós
+    {label:'Caminho 5', icon:'💥', desc:'KD + Intercept + Falter',          slots:[0,1,2,3,4]},
+    {label:'Caminho 6', icon:'👻', desc:'Invisibilidade + Proeza + Intim.', slots:[5,6,7,8,9]},
+  ],
+  [ // Seção 4 — 10 nós (3+4+3)
+    {label:'Caminho 7', icon:'🔮', desc:'Reflexo de Dano + Purificação',    slots:[0,1,2]},
+    {label:'Caminho 8', icon:'⚡', desc:'Ganho de Poder + Resistência',     slots:[3,4,5,6]},
+    {label:'Caminho 9', icon:'☣️', desc:'Hazard Shift (Fogo/Veneno/Sangue)',slots:[7,8,9]},
+  ],
+  [ // Seção 5 — 10 nós (5+3+1+1)
+    {label:'SUBS',       icon:'🔀', desc:'Nós de Substituição/Conexão',     slots:[0,1,2,3,4]},
+    {label:'Boss Island',icon:'🏝️', desc:'Guardas da Ilha do Boss',         slots:[5,6,7]},
+    {label:'Sub-Boss',   icon:'⚔️', desc:'N49',                             slots:[8]},
+    {label:'BOSS',       icon:'💀', desc:'N50 — Defensor mais forte',       slots:[9]},
+  ],
+];
+let defense  = Array(5).fill(null).map(() => Array(10).fill(null));
+let saves    = JSON.parse(localStorage.getItem('mtc_saves') || '[]');
+let curCls   = '';
+let modalSec = -1, modalSlot = -1;
+
+const CLS_ICON  = {cosmic:'🌌',tech:'⚙️',mutant:'🧬',skill:'🗡️',science:'🧪',mystic:'✨'};
+const CLS_NAME  = {cosmic:'Cosmico',tech:'Tecnologia',mutant:'Mutante',skill:'Habilidade',science:'Ciencia',mystic:'Mistico'};
+const CLS_COLOR = {cosmic:'#9b59b6',tech:'#3498db',mutant:'#f1c40f',skill:'#e74c3c',science:'#2ecc71',mystic:'#1abc9c'};
+const CLS_SHORT = {cosmic:'c',tech:'t',mutant:'m',skill:'s',science:'n',mystic:'y'};
+
+function avCls(c) { return 'av-' + (CLS_SHORT[c]||'c'); }
+function bdCls(c) { return 'b'   + (CLS_SHORT[c]||'c'); }
+function grad(c) {
+  const g = {cosmic:'linear-gradient(135deg,#9b59b6,#6c3483)',tech:'linear-gradient(135deg,#3498db,#1a5276)',
+    mutant:'linear-gradient(135deg,#f1c40f,#9a7d0a)',skill:'linear-gradient(135deg,#e74c3c,#922b21)',
+    science:'linear-gradient(135deg,#2ecc71,#1a8a4a)',mystic:'linear-gradient(135deg,#1abc9c,#0e6655)'};
+  return g[c] || '#333';
+}
+
+/* ── NAVEGACAO ── */
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  el.classList.add('active');
+  if (id === 'painel') updateDashboard();
+}
+
+/* ── SELETOR ── */
+function setCls(btn) {
+  curCls = btn.dataset.cls;
+  document.querySelectorAll('#cls-filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChars();
+}
+
+function renderChars() {
+  const q = document.getElementById('srch').value.toLowerCase();
+  const t = document.getElementById('tier-sel').value;
+  const list = CHARS.filter(c =>
+    (!curCls || c.cls === curCls) &&
+    (!q      || c.name.toLowerCase().includes(q)) &&
+    (!t      || c.tier === t)
+  );
+  const g = document.getElementById('char-grid');
+  document.getElementById('char-count').textContent = list.length + ' campeoes';
+  if (!list.length) { g.innerHTML = '<div class="no-results">Nenhum campeao encontrado.</div>'; return; }
+  g.innerHTML = list.map(c => `
+    <div class="char-card ${bdCls(c.cls)}" draggable="true" ondragstart="dragStart(event,${c.id})" title="${c.tip}">
+      <div class="avatar ${avCls(c.cls)}">${c.e}</div>
+      <div class="char-name">${c.name}</div>
+      <div class="char-meta">
+        <span class="tier-badge tier-${c.tier}">${c.tier}</span>
+        <span style="font-size:0.75rem;">${CLS_ICON[c.cls]}</span>
+      </div>
+    </div>`).join('');
+}
+
+/* ── DRAG & DROP ── */
+let dragId = null;
+function dragStart(ev, id) { dragId = id; ev.dataTransfer.setData('charId', id); }
+
+/* ── DEFESA ── */
+function renderDefense() {
+  function slotHtml(si, sl) {
+    const nodeIdx = si * 10 + sl;
+    const node = NODES[nodeIdx];
+    const ch   = defense[si][sl];
+    const nodeTag  = node ? `<div class="slot-node-tag" style="background:${node.col}22;color:${node.col};border:1px solid ${node.col}55;">N${node.id} ${node.tag}</div>` : '';
+    const nodeName = node ? `<div class="slot-node-name">${node.name}</div>` : '';
+    if (ch) return `
+      <div class="def-slot filled ${bdCls(ch.cls)}"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="dropChar(event,${si},${sl})" onclick="openModal(${si},${sl})">
+        <button class="remove-btn" onclick="event.stopPropagation();removeChar(${si},${sl})">✕</button>
+        ${nodeTag}
+        <div class="slot-avatar" style="background:${grad(ch.cls)};width:42px;height:42px;font-size:18px;">${ch.e}</div>
+        <div class="slot-name" style="font-size:0.65rem;">${ch.name}</div>
+        <div class="char-meta" style="margin-top:3px;"><span class="tier-badge tier-${ch.tier}">${ch.tier}</span></div>
+      </div>`;
+    return `
+      <div class="def-slot"
+           ondragover="event.preventDefault();this.classList.add('drag-over')"
+           ondragleave="this.classList.remove('drag-over')"
+           ondrop="dropChar(event,${si},${sl})" onclick="openModal(${si},${sl})">
+        ${nodeTag}${nodeName}
+        <div class="slot-empty-icon" style="font-size:1.4rem;">➕</div>
+      </div>`;
+  }
+  document.getElementById('def-sections').innerHTML = SEC_NAMES.map((name, si) =>
+    `<div class="def-section">
+      <div class="def-section-header"><div class="sec-num">${si+1}</div><div class="sec-name">${name}</div></div>
+      ${PATH_GROUPS[si].map(g => `
+        <div class="path-group">
+          <div class="path-label-row">
+            <span class="path-label">${g.icon} ${g.label}</span>
+            ${g.desc ? `<span class="path-desc">${g.desc}</span>` : ''}
+          </div>
+          <div class="def-slots">${g.slots.map(sl => slotHtml(si, sl)).join('')}</div>
+        </div>`).join('')}
+    </div>`).join('');
+  updateScore();
+}
+
+function dropChar(ev, si, sl) {
+  ev.preventDefault(); ev.currentTarget.classList.remove('drag-over');
+  const id = parseInt(ev.dataTransfer.getData('charId') || dragId);
+  if (!id) return;
+  const ch = CHARS.find(c => c.id === id);
+  if (!ch) return;
+  defense[si][sl] = ch;
+  syncDefense();
+  renderDefense();
+  toast(ch.e + ' ' + ch.name + ' adicionado!');
+}
+
+function removeChar(si, sl) { defense[si][sl] = null; syncDefense(); renderDefense(); }
+
+function syncDefense() {
+  alliance[curGroup].defense = JSON.parse(JSON.stringify(defense));
+  saveAlliance();
+}
+
+function clearDefense() {
+  if (!confirm('Limpar toda a defesa?')) return;
+  defense = Array(5).fill(null).map(() => Array(10).fill(null));
+  syncDefense();
+  renderDefense(); toast('Defesa limpa.');
+}
+
+/* ── MODAL ── */
+function openModal(si, sl) {
+  modalSec = si; modalSlot = sl;
+  document.getElementById('modal-srch').value = '';
+  document.getElementById('modal-clear-btn').style.display = (si >= 0 && defense[si][sl]) ? 'inline-flex' : 'none';
+  renderModalList();
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('modal-srch').focus();
+}
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+function clearSlot() { if (modalSec >= 0) { defense[modalSec][modalSlot] = null; renderDefense(); } closeModal(); toast('Campeao removido.'); }
+
+function renderModalList() {
+  const q = document.getElementById('modal-srch').value.toLowerCase();
+  const list = CHARS.filter(c => !q || c.name.toLowerCase().includes(q));
+  document.getElementById('modal-list').innerHTML = list.map(c => `
+    <div class="modal-item" onclick="pickChar(${c.id})">
+      <div class="modal-avatar" style="background:${grad(c.cls)}">${c.e}</div>
+      <div style="flex:1;">
+        <div class="modal-char-name">${c.name}</div>
+        <div class="modal-char-sub">${CLS_ICON[c.cls]} ${CLS_NAME[c.cls]} · Tier ${c.tier}</div>
+      </div>
+      <span class="tier-badge tier-${c.tier}">${c.tier}</span>
+    </div>`).join('');
+}
+
+function pickChar(id) {
+  const ch = CHARS.find(c => c.id === id);
+  if (!ch) return;
+  if (modalSec >= 0) { defense[modalSec][modalSlot] = ch; syncDefense(); renderDefense(); toast(ch.e + ' ' + ch.name + ' adicionado!'); }
+  closeModal();
+}
+
+/* ── NOS ── */
+function renderNodes() {
+  const secTitles = [
+    'Caminhos 1–2','Caminhos 3–4','Caminhos 5–6','Caminhos 7–8–9','SUBS + Boss Island'
+  ];
+  function nodeCard(n) {
+    if (!n) return '';
+    const chips = n.defs.map(d => {
+      const ch = CHARS.find(c => c.name === d);
+      const col = ch ? CLS_COLOR[ch.cls] : '#888';
+      return `<span class="defender-chip" style="background:${col}22;border:1px solid ${col}55;color:${col};">${ch ? ch.e+' ':'' }${d}</span>`;
+    }).join('');
+    return `<div class="node-card">
+      <div class="node-header">
+        <div class="node-num">N${n.id}</div>
+        <div class="node-info">
+          <div class="node-name">${n.name}</div>
+          <span class="node-tag" style="background:${n.col}22;border:1px solid ${n.col}44;color:${n.col};">${n.tag}</span>
+        </div>
+      </div>
+      <div class="node-desc">${n.desc}</div>
+      <div class="node-defenders-lbl">🏆 Melhores Defensores:</div>
+      <div class="defenders-list">${chips}</div>
+    </div>`;
+  }
+  document.getElementById('nodes-grid').innerHTML = PATH_GROUPS.map((groups, si) =>
+    `<div class="nodes-section-block">
+      <div class="def-section-header" style="margin-bottom:10px;">
+        <div class="sec-num">${si+1}</div>
+        <div class="sec-name">${secTitles[si]}</div>
+      </div>
+      ${groups.map(g => `
+        <div class="path-group-nodes">
+          <div class="path-label-row">
+            <span class="path-label">${g.icon} ${g.label}</span>
+            ${g.desc ? `<span class="path-desc">${g.desc}</span>` : ''}
+          </div>
+          <div class="nodes-subgrid">${g.slots.map(sl => nodeCard(NODES[si*10+sl])).join('')}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+/* ── SCORE ── */
+function calcStats() {
+  const tp = {S:30,A:20,B:10,C:5};
+  let score=0,filled=0,tiers={S:0,A:0,B:0,C:0},classes={};
+  defense.forEach(sec => sec.forEach(ch => {
+    if (!ch) return; filled++;
+    score += (tp[ch.tier]||0) + Math.floor(ch.def/10);
+    tiers[ch.tier] = (tiers[ch.tier]||0)+1;
+    classes[ch.cls] = (classes[ch.cls]||0)+1;
+  }));
+  const div = Object.keys(classes).length;
+  score += div*15 + filled*5;
+  return {score,filled,tiers,classes,div};
+}
+
+function updateScore() {
+  document.getElementById('header-score').textContent = calcStats().score;
+}
+
+/* ── DASHBOARD ── */
+function updateDashboard() {
+  const {score,filled,tiers,classes,div} = calcStats();
+  const MAX = 3300, pct = Math.min(100, Math.round(score/MAX*100));
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${score}</div><div class="stat-lbl">Pontuacao Total</div></div>
+    <div class="stat-card"><div class="stat-val">${filled}/50</div><div class="stat-lbl">Nós Preenchidos</div></div>
+    <div class="stat-card"><div class="stat-val">${div}/6</div><div class="stat-lbl">Classes Diferentes</div></div>
+    <div class="stat-card"><div class="stat-val">${tiers.S||0}</div><div class="stat-lbl">Campeoes Tier S</div></div>
+    <div class="stat-card"><div class="stat-val">${tiers.A||0}</div><div class="stat-lbl">Campeoes Tier A</div></div>
+    <div class="stat-card"><div class="stat-val">${CHARS.length}</div><div class="stat-lbl">Campeoes no Banco</div></div>`;
+  document.getElementById('score-fill').style.width = pct + '%';
+  document.getElementById('score-pct').textContent  = score + ' / ' + MAX + ' (' + pct + '%)';
+  document.getElementById('breakdown').innerHTML = [
+    ['Tier S (x30)',(tiers.S||0)*30],['Tier A (x20)',(tiers.A||0)*20],
+    ['Tier B (x10)',(tiers.B||0)*10],['Tier C (x5)', (tiers.C||0)*5],
+    ['Diversidade de Classes (x15)',div*15],['Nós Preenchidos (x5)',filled*5],
+  ].map(([l,v]) => `<div class="bk-item"><span class="bk-label">${l}</span><span class="bk-val">+${v}</span></div>`).join('');
+  const db = document.getElementById('div-bar');
+  db.innerHTML = Object.keys(classes).length
+    ? Object.entries(classes).map(([c,n]) => `<span class="div-chip div-${c}">${CLS_ICON[c]} ${CLS_NAME[c]}: ${n}</span>`).join('')
+    : '<span style="color:var(--text-dim);font-size:0.82rem;">Nenhum campeao adicionado.</span>';
+  document.getElementById('def-summary').innerHTML = defense.map((sec,si) => `
+    <div class="sum-section">
+      <div class="sum-title">Seção ${si+1} (N${si*10+1}–N${si*10+10})</div>
+      ${sec.map(ch => ch
+        ? `<div class="sum-char" style="background:${CLS_COLOR[ch.cls]}99;">${ch.e} ${ch.name.split(' ')[0]}</div>`
+        : `<div class="sum-empty">Vazio</div>`).join('')}
+    </div>`).join('');
+  renderSaves();
+}
+
+/* ── SALVAR ── */
+function saveDefense() {
+  const nm = prompt('Nome da defesa:','Defesa ' + new Date().toLocaleDateString('pt-BR'));
+  if (!nm) return;
+  saves.unshift({id:Date.now(),name:nm,date:new Date().toLocaleString('pt-BR'),def:JSON.parse(JSON.stringify(defense)),score:calcStats().score});
+  localStorage.setItem('mtc_saves', JSON.stringify(saves));
+  toast('Salvo: ' + nm);
+}
+function loadSave(id) {
+  const s = saves.find(x => x.id===id); if (!s) return;
+  defense = JSON.parse(JSON.stringify(s.def));
+  syncDefense();
+  renderDefense();
+  document.querySelectorAll('.nav-tab')[1].click();
+  toast('Carregado: ' + s.name);
+}
+function deleteSave(id) {
+  if (!confirm('Deletar?')) return;
+  saves = saves.filter(x => x.id!==id);
+  localStorage.setItem('mtc_saves',JSON.stringify(saves));
+  renderSaves(); toast('Defesa deletada.');
+}
+function renderSaves() {
+  const el = document.getElementById('saves-list');
+  if (!saves.length) { el.innerHTML = '<div class="no-results">Nenhuma defesa salva ainda.</div>'; return; }
+  el.innerHTML = saves.map(s => `
+    <div class="save-item">
+      <div><div class="save-name">${s.name}</div><div class="save-meta">📅 ${s.date} · 🏆 ${s.score} pts</div></div>
+      <div class="save-actions">
+        <button class="btn btn-secondary btn-sm" onclick="loadSave(${s.id})">📂 Carregar</button>
+        <button class="btn btn-danger btn-sm"    onclick="deleteSave(${s.id})">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ── TOAST ── */
+let tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(tt); tt = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ══════════════════════════════════════════════════
+   ALIANÇA — ESTADO
+══════════════════════════════════════════════════ */
+let alliance = JSON.parse(localStorage.getItem('mtc_alliance') || 'null') || [
+  {id:0,name:'Grupo 1',members:[]},
+  {id:1,name:'Grupo 2',members:[]},
+  {id:2,name:'Grupo 3',members:[]},
+];
+// Garante que cada grupo tenha sua defesa independente (compat. com dados antigos)
+alliance.forEach(g => { if (!g.defense) g.defense = Array(5).fill(null).map(()=>Array(10).fill(null)); });
+let curGroup = 0;
+let maMemberId = null;  // membro sendo editado
+let maTempChamps = [];  // [{charId, stars, rank, ascension}]
+
+const STARS_OPTS = ['1★','2★','3★','4★','5★','6★','7★'];
+const RANK_OPTS  = ['R1','R2','R3','R4','R5','R6'];
+const ASC_OPTS   = ['Sem Ascensão','A1','A2','A3'];
+
+function saveAlliance() { localStorage.setItem('mtc_alliance', JSON.stringify(alliance)); }
+
+/* ── GRUPOS ── */
+function setGroup(idx, el) {
+  curGroup = idx;
+  document.querySelectorAll('.group-tab').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  // Carrega a defesa específica deste grupo
+  defense = JSON.parse(JSON.stringify(alliance[curGroup].defense));
+  document.getElementById('resultado-defesa').style.display = 'none';
+  renderDefense();
+  renderMembers();
+}
+
+/* ── MEMBROS ── */
+function addMember() {
+  const nm = prompt('Nome do membro:');
+  if (!nm || !nm.trim()) return;
+  alliance[curGroup].members.push({id: Date.now(), name: nm.trim(), champs: []});
+  saveAlliance(); renderMembers();
+}
+
+function removeMember(id) {
+  if (!confirm('Remover membro?')) return;
+  alliance[curGroup].members = alliance[curGroup].members.filter(m => m.id !== id);
+  saveAlliance(); renderMembers();
+}
+
+function renderMembers() {
+  const members = alliance[curGroup].members;
+  const el = document.getElementById('member-list');
+  if (!members.length) {
+    el.innerHTML = '<div class="no-results">Nenhum membro neste grupo. Clique em "Adicionar Membro".</div>';
+    updateMontarBtn(); return;
+  }
+  el.innerHTML = members.map(m => {
+    const champCount = m.champs.length;
+    const chips = m.champs.map(e => {
+      const ch = CHARS.find(c => c.id === e.charId);
+      if (!ch) return '';
+      const col = CLS_COLOR[ch.cls];
+      return `<span class="mchamp-chip" style="background:${col}22;border-color:${col}55;color:${col};" onclick="openMaModal(${m.id})" title="${e.stars} · ${e.rank} · ${e.ascension}">${ch.e} ${ch.name.split(' ')[0]} <small style="opacity:0.7">${e.stars}/${e.rank}</small></span>`;
+    }).join('');
+    return `<div class="member-card">
+      <div class="member-header">
+        <div class="member-avatar">${m.name[0].toUpperCase()}</div>
+        <div style="flex:1;">
+          <div class="member-name-txt">${m.name}</div>
+          <div class="member-stats">${champCount} campeão(ões) cadastrado(s)</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="openMaModal(${m.id})">⚔️ Campeões</button>
+        <button class="btn btn-danger btn-sm" onclick="removeMember(${m.id})">🗑️</button>
+      </div>
+      <div class="member-champs-row">${chips || '<span style="color:var(--text-dim);font-size:0.78rem;">Nenhum campeão cadastrado.</span>'}</div>
+    </div>`;
+  }).join('');
+  updateMontarBtn();
+}
+
+function updateMontarBtn() {
+  const members = alliance[curGroup].members;
+  const allHave = members.length > 0 && members.every(m => m.champs.length > 0);
+  const btn = document.getElementById('btn-montar');
+  const lbl = document.getElementById('alianca-status');
+  btn.disabled = !allHave;
+  btn.style.opacity = allHave ? '1' : '0.5';
+  if (!members.length) lbl.textContent = 'Cadastre membros e seus campeões para montar a defesa.';
+  else if (!allHave) lbl.textContent = 'Todos os membros precisam ter pelo menos 1 campeão cadastrado.';
+  else lbl.textContent = `✅ ${members.length} membros prontos — clique em "Montar Defesa"!`;
+}
+
+/* ── MODAL ALIANÇA ── */
+function openMaModal(memberId) {
+  const member = alliance[curGroup].members.find(m => m.id === memberId);
+  if (!member) return;
+  maMemberId = memberId;
+  maTempChamps = JSON.parse(JSON.stringify(member.champs));
+  document.getElementById('ma-title').textContent = `⚔️ Campeões de ${member.name}`;
+  document.getElementById('ma-srch').value = '';
+  renderMaList();
+  renderMaSelected();
+  document.getElementById('modal-alianca').classList.add('active');
+  document.getElementById('ma-srch').focus();
+}
+
+function closeMa() {
+  document.getElementById('modal-alianca').classList.remove('active');
+  maMemberId = null; maTempChamps = [];
+}
+
+function renderMaList() {
+  const q = document.getElementById('ma-srch').value.toLowerCase();
+  const selectedIds = new Set(maTempChamps.map(e => e.charId));
+  const list = CHARS.filter(c => !q || c.name.toLowerCase().includes(q));
+  document.getElementById('ma-list').innerHTML = list.map(c => {
+    const sel = selectedIds.has(c.id);
+    return `<div class="ma-champ-item${sel?' selected':''}" onclick="toggleMaChamp(${c.id})">
+      <div class="modal-avatar" style="background:${grad(c.cls)}">${c.e}</div>
+      <div style="flex:1;">
+        <div class="modal-char-name">${c.name}</div>
+        <div class="modal-char-sub">${CLS_ICON[c.cls]} ${CLS_NAME[c.cls]} · Tier ${c.tier}</div>
+      </div>
+      <span class="tier-badge tier-${c.tier}">${c.tier}</span>
+      ${sel ? '<span style="color:var(--accent);font-size:1rem;">✓</span>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function toggleMaChamp(charId) {
+  const idx = maTempChamps.findIndex(e => e.charId === charId);
+  if (idx >= 0) { maTempChamps.splice(idx, 1); }
+  else { maTempChamps.push({charId, stars:'7★', rank:'R4', ascension:'Sem Ascensão'}); }
+  renderMaList(); renderMaSelected();
+}
+
+function renderMaSelected() {
+  const lbl = document.getElementById('ma-selected-lbl');
+  const container = document.getElementById('ma-selected-list');
+  lbl.textContent = maTempChamps.length + ' selecionado(s)';
+  if (!maTempChamps.length) { container.innerHTML = ''; return; }
+  container.innerHTML = maTempChamps.map((e, idx) => {
+    const ch = CHARS.find(c => c.id === e.charId);
+    if (!ch) return '';
+    const col = CLS_COLOR[ch.cls];
+    const starsOpts = STARS_OPTS.map(s => `<option${e.stars===s?' selected':''}>${s}</option>`).join('');
+    const rankOpts  = RANK_OPTS.map(r  => `<option${e.rank===r?' selected':''}>${r}</option>`).join('');
+    const ascOpts   = ASC_OPTS.map(a   => `<option${e.ascension===a?' selected':''}>${a}</option>`).join('');
+    return `<div class="ma-champ-row">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="result-champ-av" style="background:${grad(ch.cls)};width:28px;height:28px;font-size:13px;">${ch.e}</div>
+        <span style="font-size:0.78rem;font-weight:700;color:${col};">${ch.name}</span>
+      </div>
+      <select class="ma-select" onchange="updateMaChamp(${idx},'stars',this.value)">${starsOpts}</select>
+      <select class="ma-select" onchange="updateMaChamp(${idx},'rank',this.value)">${rankOpts}</select>
+      <select class="ma-select" onchange="updateMaChamp(${idx},'ascension',this.value)">${ascOpts}</select>
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px;" onclick="toggleMaChamp(${e.charId})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateMaChamp(idx, field, val) {
+  if (maTempChamps[idx]) maTempChamps[idx][field] = val;
+}
+
+function saveMaChamps() {
+  const member = alliance[curGroup].members.find(m => m.id === maMemberId);
+  if (member) { member.champs = JSON.parse(JSON.stringify(maTempChamps)); }
+  saveAlliance(); closeMa(); renderMembers();
+  toast('Campeões salvos!');
+}
+
+/* ══════════════════════════════════════════════════
+   ESTRATÉGIA
+══════════════════════════════════════════════════ */
+let curStrategy = 'balanced';
+
+function setStrategy(val, el) {
+  curStrategy = val;
+  document.querySelectorAll('.strat-opt').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  // Re-monta automaticamente se já há defesa gerada para este grupo
+  const hasChamps = alliance[curGroup].members.some(m => m.champs.length > 0);
+  if (hasChamps && document.getElementById('resultado-defesa').style.display !== 'none') {
+    montarDefesa();
+  }
+}
+
+function getStrategyWeights() {
+  // 50 nós: s1=N1-10(idx 0-9), s2=N11-20(10-19), s3=N21-30(20-29), s4=N31-40(30-39), s5=N41-50(40-49)
+  // idx 48 = Sub-Boss (N49), idx 49 = Boss (N50)
+  const w = Array(50).fill(1);
+  if (curStrategy === 'boss') {
+    for(let i=40;i<50;i++) w[i]=4;
+    w[48]=5; w[49]=6;
+    for(let i=30;i<40;i++) w[i]=2;
+  } else if (curStrategy === 'subboss') {
+    for(let i=30;i<40;i++) w[i]=4;
+    w[48]=5;
+    for(let i=40;i<50;i++) w[i]=2;
+    w[49]=3;
+  } else if (curStrategy === 'boss_subboss') {
+    for(let i=30;i<50;i++) w[i]=3;
+    w[48]=5; w[49]=6;
+  } else if (curStrategy === 'mid') {
+    for(let i=10;i<30;i++) w[i]=3;
+  } else if (curStrategy === 'frontline') {
+    for(let i=0;i<10;i++) w[i]=3;
+    for(let i=10;i<20;i++) w[i]=2;
+  }
+  return w;
+}
+
+function getStrategyName() {
+  return {balanced:'Distribuição Equilibrada',boss:'Ilha do Boss Reforçada (N41–N50)',
+    subboss:'Sub-Boss Reforçado (N31–N40)',boss_subboss:'Boss + Sub-Boss (N31–N50)',
+    mid:'Centro Reforçado (N11–N30)',frontline:'Linha de Frente (N1–N10)'}[curStrategy] || curStrategy;
+}
+
+function hasNodeSynergy(ch, nodeIdx) {
+  const node = NODES[nodeIdx];
+  if (!ch || !node || !node.defs) return false;
+  const nm = ch.name.toLowerCase();
+  return node.defs.some(d => {
+    const dl = d.toLowerCase();
+    return nm.includes(dl.split(' ')[0]) || dl.includes(nm.split(' ')[0]);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   AUTO-DEFESA — ALGORITMO POR NÓ
+══════════════════════════════════════════════════ */
+function montarDefesa() {
+  const members = alliance[curGroup].members.filter(m => m.champs.length > 0);
+  if (!members.length) { toast('Adicione membros e campeões primeiro.'); return; }
+
+  const TIER_PTS  = {S:50, A:30, B:15, C:5};
+  const RANK_PTS  = {'R1':1,'R2':2,'R3':3,'R4':4,'R5':5,'R6':6};
+  const ASC_PTS   = {'Sem Ascensão':0,'A1':2,'A2':4,'A3':6};
+  const STARS_MAP = {'1★':1,'2★':2,'3★':3,'4★':4,'5★':5,'6★':6,'7★':7};
+  const stratW    = getStrategyWeights(); // Array(55)
+
+  function champBase(e) {
+    const ch = CHARS.find(c => c.id === e.charId);
+    if (!ch) return 0;
+    return (STARS_MAP[e.stars]||5)*12 + (RANK_PTS[e.rank]||4)*10 +
+           (ASC_PTS[e.ascension]||0)*6 + (TIER_PTS[ch.tier]||5);
+  }
+
+  // 1. Coletar todos os campeões de todos os membros
+  const allEntries = [];
+  members.forEach(m => {
+    m.champs.forEach(e => {
+      const ch = CHARS.find(c => c.id === e.charId);
+      if (ch) allEntries.push({e, ch, member:m, base:champBase(e)});
+    });
+  });
+  if (!allEntries.length) { toast('Nenhum campeão cadastrado nos membros.'); return; }
+
+  // 2. Gerar TODOS os pares (campeão × nó) com pontuação
+  //    pontuação = base × sinergia(3x se match) × peso estratégico do nó
+  const pairs = [];
+  for (const {e, ch, member, base} of allEntries) {
+    for (let ni = 0; ni < NODES.length; ni++) {
+      const syn  = hasNodeSynergy(ch, ni);
+      const score = base * (syn ? 3.0 : 1.0) * (stratW[ni] || 1);
+      pairs.push({e, ch, member, ni, score, syn});
+    }
+  }
+
+  // 3. Ordenar decrescente: melhor combinação campeão+nó no mundo todo vai primeiro
+  pairs.sort((a, b) => b.score - a.score);
+
+  // 4. Atribuição gananciosa (bipartite greedy)
+  const totalNodes     = NODES.length; // 55
+  const slotsPerMember = Math.max(1, Math.ceil(totalNodes / members.length));
+  defense = Array(5).fill(null).map(() => Array(10).fill(null));
+
+  const usedChamp  = new Set();
+  const usedNode   = new Set();
+  const quota      = {}, assignments = {};
+  members.forEach(m => { quota[m.id] = 0; assignments[m.id] = []; });
+
+  function assign(pair) {
+    const {e, ch, member, ni, syn} = pair;
+    const si = Math.floor(ni / 10), sl = ni % 10;
+    if (si >= 5 || sl >= 10) return;
+    defense[si][sl] = ch;
+    usedChamp.add(e.charId);
+    usedNode.add(ni);
+    quota[member.id]++;
+    assignments[member.id].push({ch, si, sl, e, nodeIdx:ni, synergy:syn});
+  }
+
+  // Passagem 1: respeita cota — o melhor par global vai primeiro
+  for (const p of pairs) {
+    if (usedChamp.has(p.e.charId) || usedNode.has(p.ni)) continue;
+    if (quota[p.member.id] >= slotsPerMember) continue;
+    assign(p);
+  }
+  // Passagem 2: preenche nós vazios sem cota (usa quem ainda tem campeão livre)
+  for (const p of pairs) {
+    if (usedChamp.has(p.e.charId) || usedNode.has(p.ni)) continue;
+    assign(p);
+  }
+
+  syncDefense();
+  renderDefense();
+  renderResultCards(members, assignments);
+  document.getElementById('resultado-defesa').style.display = 'block';
+  toast('✅ Defesa montada — ' + getStrategyName());
+}
+
+function renderResultCards(members, assignments) {
+  const SEC_SHORT = ['Camp.1–2','Camp.3–4','Camp.5–6','Camp.7–9','SUBS+Boss'];
+  document.getElementById('result-cards').innerHTML = members.map(m => {
+    const list = (assignments[m.id] || [])
+      .sort((a,b) => (a.nodeIdx??a.si*10+a.sl) - (b.nodeIdx??b.si*10+b.sl));
+    const avgDef = list.length ? Math.round(list.reduce((s, x) => s + (x.ch.def||50), 0) / list.length) : 0;
+    const rows = list.map(({ch, si, sl, e, synergy}) => {
+      const nodeIdx = si*10+sl;
+      const node = NODES[nodeIdx];
+      return `
+      <div class="result-champ-row" style="background:${grad(ch.cls)}22;">
+        <div class="result-champ-av" style="background:${grad(ch.cls)}">${ch.e}</div>
+        <div class="result-champ-info">
+          <div class="result-champ-name">${ch.name}${synergy?'<span class="synergy-star" title="Sinergia com o nó!">⭐</span>':''}</div>
+          <div class="result-champ-sub">${e.stars} · ${e.rank} · ${e.ascension}</div>
+          ${node?`<div style="font-size:0.62rem;color:var(--text-dim);">${node.name} · ${node.tag}</div>`:''}
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div class="result-slot-badge">N${nodeIdx+1}</div>
+          <div style="font-size:0.6rem;color:var(--text-dim);margin-top:2px;">${SEC_SHORT[si]||''}</div>
+        </div>
+      </div>`;
+    }).join('');
+    const synergyCount = list.filter(x=>x.synergy).length;
+    return `<div class="result-card">
+      <div class="result-member-name">👤 ${m.name}
+        <span style="font-size:0.72rem;font-weight:400;"> · ${list.length} nós</span>
+        ${synergyCount?`<span style="font-size:0.72rem;color:#f1c40f;"> · ⭐${synergyCount} sinergias</span>`:''}
+      </div>
+      ${rows||'<div style="color:var(--text-dim);font-size:0.8rem;">Sem nós atribuídos.</div>'}
+      <div style="margin-top:8px;font-size:0.72rem;color:var(--text-dim);">
+        Poder defensivo médio: ${avgDef}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  defense = JSON.parse(JSON.stringify(alliance[0].defense));
+  renderChars(); renderDefense(); renderNodes(); renderMembers();
+  document.getElementById('modal').addEventListener('click', e => { if (e.target===document.getElementById('modal')) closeModal(); });
+});
+</script>
+</body>
+</html>
